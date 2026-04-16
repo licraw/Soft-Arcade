@@ -9,6 +9,24 @@
     <script src="game.js"></script>
   </head>
 <body>
-  <div id="board"></div>  
+  <div id="board"></div>
+  <div id="start-menu" class="modal">
+    <div class="modal-content">
+      <h1>Tile Game</h1>
+      <p>Select a level to start.</p>
+      <div class="menu-actions">
+        <button class="level-button" type="button" data-level="easy">Easy</button>
+        <button class="level-button" type="button" data-level="medium">Medium</button>
+        <button class="level-button" type="button" data-level="hard">Hard</button>
+      </div>
+    </div>
+  </div>
+  <div id="win-modal" class="modal hidden">
+    <div class="modal-content">
+      <h1>You Win</h1>
+      <p>Congratulations. You solved the puzzle.</p>
+      <button id="win-modal-close" type="button">Back To Levels</button>
+    </div>
+  </div>
 </body>
 </html>
