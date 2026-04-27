@@ -1,15 +1,68 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Assignment 9</title>
+    <title>Tile Game Arcade</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <link rel="stylesheet" href="game.css">
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400&display=swap" rel="stylesheet">
     <script src="jquery-3.4.1.js"></script>
+    <script src="game-config.js"></script>
     <script src="game.js"></script>
   </head>
 <body>
-  <div id="board"></div>
+  <div id="board">
+    <div id="hud">
+      <div class="hud-topline">
+        <div class="hud-compact-level">
+          <span class="hud-label">Level</span>
+          <span id="hud-level-pill">Medium 4x4</span>
+        </div>
+        <button id="hud-toggle-button" class="icon-button" type="button" aria-label="Toggle game menu" title="Game menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="hud-panel">
+        <div class="hud-summary">
+          <div class="hud-item">
+            <span class="hud-label">Level</span>
+            <span id="current-level">Medium 4x4</span>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Moves</span>
+            <span id="move-count">0</span>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">Time</span>
+            <span id="timer">00:00</span>
+          </div>
+          <div id="personal-best-wrap" class="hud-item hud-best">
+            <span class="hud-label">Best</span>
+            <span id="personal-best">N/A</span>
+          </div>
+        </div>
+        <div class="hud-actions">
+          <button id="leaderboard-button" class="icon-button" type="button" aria-label="Open leaderboard" title="Leaderboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l2.3 4.8 5.2.8-3.8 3.8.9 5.4L12 15.3 7.4 18l.9-5.4-3.8-3.8 5.2-.8z"></path>
+            </svg>
+          </button>
+          <button id="restart-button" class="icon-button hud-danger-button" type="button" aria-label="Restart level" title="Restart">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 4v6h6M20 12a8 8 0 10-2.3 5.7"></path>
+            </svg>
+          </button>
+          <button id="main-menu-button" class="icon-button hud-danger-button" type="button" aria-label="Return to main menu" title="Main menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 11.5L12 4l9 7.5M6.5 10.5V20h11v-9.5M10 20v-5h4v5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="start-menu" class="modal">
     <div class="modal-content">
       <h1>Tile Game</h1>
@@ -18,6 +71,7 @@
         <button class="level-button" type="button" data-level="easy">Easy</button>
         <button class="level-button" type="button" data-level="medium">Medium</button>
         <button class="level-button" type="button" data-level="hard">Hard</button>
+        <button id="menu-leaderboard-button" type="button">Leaderboard</button>
       </div>
     </div>
   </div>
@@ -25,7 +79,34 @@
     <div class="modal-content">
       <h1>You Win</h1>
       <p>Congratulations. You solved the puzzle.</p>
+      <p id="win-stats">Time: 00:00 | Moves: 0</p>
+      <p id="win-best">Personal Best: No best yet</p>
+      <p id="win-best-badge" class="hidden">New Personal Best</p>
+      <label id="score-name-label" for="score-name">Arcade Name</label>
+      <input id="score-name" type="text" maxlength="12" autocomplete="nickname" placeholder="AAA">
+      <p id="score-submit-status" class="modal-note">Enter a name to save your score.</p>
+      <button id="submit-score-button" type="button">Save Score</button>
       <button id="win-modal-close" type="button">Back To Levels</button>
+    </div>
+  </div>
+  <div id="leaderboard-modal" class="modal hidden">
+    <div class="modal-content">
+      <h1>Leaderboard</h1>
+      <p id="leaderboard-level">Medium 4x4</p>
+      <p id="leaderboard-status" class="modal-note hidden"></p>
+      <ol id="leaderboard-list"></ol>
+      <p id="leaderboard-empty" class="hidden">No scores yet for this difficulty.</p>
+      <button id="leaderboard-close" type="button">Close</button>
+    </div>
+  </div>
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-content modal-confirm">
+      <h1 id="confirm-title">Leave Game?</h1>
+      <p id="confirm-message">Your current run will be lost.</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" type="button">Keep Playing</button>
+        <button id="confirm-accept" class="modal-danger-button" type="button">Leave</button>
+      </div>
     </div>
   </div>
 </body>

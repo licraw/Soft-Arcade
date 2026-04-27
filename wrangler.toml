@@ -1,0 +1,9 @@
+name = "tile-game-scores"
+main = "worker/src/index.js"
+compatibility_date = "2026-04-27"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tile-game-scores"
+database_id = "37621fdb-3de9-403d-b1f2-31d78e762397"
+migrations_dir = "worker/migrations"
