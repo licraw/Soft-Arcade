@@ -1,5 +1,7 @@
 # Tile Game Arcade
 
+https://tile-game-arcade.pages.dev/
+
 Tile Game Arcade is a browser-based sliding puzzle built with jQuery. Players choose a difficulty, solve the board using directional moves, and submit a short arcade-style name to a shared high-score table when they win.
 
 The project uses a static frontend for the game itself and a small Cloudflare backend for leaderboard storage. Personal bests are stored locally in the browser, while the shared leaderboard is stored remotely in D1 and served through a Worker API.
