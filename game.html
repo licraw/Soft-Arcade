@@ -19,6 +19,7 @@
           <span class="hud-label">Level</span>
           <span id="hud-level-pill">Medium 4x4</span>
         </div>
+        <p id="scrambler-hud-line" class="scrambler-line hud-scrambler-line">Let&apos;s mix this up.</p>
         <button id="hud-toggle-button" class="icon-button" type="button" aria-label="Toggle game menu" title="Game menu">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16"></path>
@@ -66,8 +67,9 @@
   </div>
   <div id="start-menu" class="modal">
     <div class="modal-content">
-      <h1>Tile Game</h1>
-      <p>Select a level to start.</p>
+      <h1 class="game-title">Tile Game Arcade</h1>
+      <p class="game-subtitle">Beat the Scrambler</p>
+      <p id="scrambler-menu-line" class="scrambler-line">Let&apos;s mix this up.</p>
       <div class="menu-actions">
         <button class="level-button" type="button" data-level="easy">Easy</button>
         <button class="level-button" type="button" data-level="medium">Medium</button>
@@ -80,6 +82,7 @@
     <div class="modal-content">
       <h1>You Win</h1>
       <p>Congratulations. You solved the puzzle.</p>
+      <p id="scrambler-win-line" class="scrambler-line">Not bad.</p>
       <p id="win-stats">Time: 00:00 | Moves: 0</p>
       <p id="win-best">Personal Best: No best yet</p>
       <p id="win-best-badge" class="hidden">New Personal Best</p>
@@ -117,6 +120,7 @@
     <div class="modal-content modal-confirm">
       <h1 id="confirm-title">Leave Game?</h1>
       <p id="confirm-message">Your current run will be lost.</p>
+      <p id="scrambler-confirm-line" class="scrambler-line hidden">Already?</p>
       <div class="confirm-actions">
         <button id="confirm-cancel" type="button">Keep Playing</button>
         <button id="confirm-accept" class="modal-danger-button" type="button">Leave</button>

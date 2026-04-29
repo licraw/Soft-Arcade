@@ -36,6 +36,26 @@ function() {
   let touchStartX = null;
   let touchStartY = null;
   let MIN_SWIPE_DISTANCE = 24;
+  let SCRAMBLER_LINES = {
+    menu: [
+      "Let’s mix this up.",
+      "Fix it. If you can.",
+      "Order is overrated.",
+      "Try not to embarrass yourself."
+    ],
+    confirm: [
+      "Already?",
+      "That was quick.",
+      "Giving up so soon?"
+    ],
+    win: [
+      "Not bad.",
+      "You got lucky.",
+      "Do it again.",
+      "The Scrambler is annoyed.",
+      "Ok... that was clean."
+    ]
+  };
 
   function getApiBaseUrl() {
     let config = window.TILE_GAME_CONFIG || {};
@@ -71,6 +91,7 @@ function() {
   }
 
   function showStartMenu() {
+    setScramblerLine("#scrambler-menu-line", SCRAMBLER_LINES.menu);
     showModal("#start-menu");
   }
 
@@ -93,12 +114,23 @@ function() {
     $("#confirm-title").text(options.title || "Are you sure?");
     $("#confirm-message").text(options.message || "");
     $("#confirm-accept").text(options.confirmLabel || "Confirm");
+    setScramblerLine("#scrambler-confirm-line", SCRAMBLER_LINES.confirm);
+    $("#scrambler-confirm-line").removeClass("hidden");
     showModal("#confirm-modal");
   }
 
   function hideConfirmModal() {
     confirmAction = null;
+    $("#scrambler-confirm-line").addClass("hidden");
     hideModal("#confirm-modal");
+  }
+
+  function randomScramblerLine(lines) {
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+
+  function setScramblerLine(selector, lines) {
+    $(selector).text(randomScramblerLine(lines));
   }
 
   function resetScoreSubmissionUi() {
@@ -213,6 +245,9 @@ function() {
     $("#hud-level-pill").text(LEVELS[currentLevelName].label);
     $("#move-count").text(moveCount);
     $("#timer").text(formatTime(timerSeconds));
+    if (!gameStarted || moveCount === 0) {
+      setScramblerLine("#scrambler-hud-line", SCRAMBLER_LINES.menu);
+    }
     updatePersonalBestDisplay();
   }
 
@@ -616,6 +651,7 @@ function() {
       updateHud();
       updateWinStats();
       updateWinBest(isNewBest);
+      setScramblerLine("#scrambler-win-line", SCRAMBLER_LINES.win);
       setScoreSubmitStatus("Enter a name to save your score.", false);
       $("#score-name").val("").prop("disabled", false);
       $("#submit-score-button").prop("disabled", false).text("Save Score");
