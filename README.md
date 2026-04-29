@@ -206,28 +206,3 @@ npm run deploy:pages
 ```
 
 The Pages build copies the static client files into `pages-dist/`, including an `index.html` entrypoint for the deployed site root.
-
-## Repository Notes
-
-Safe to commit:
-
-- frontend source files
-- Worker source
-- D1 migration files
-- `wrangler.toml`
-- public Worker URL in `game-config.js`
-- D1 database identifier in `wrangler.toml`
-
-Do not commit:
-
-- `.env`
-- `.dev.vars`
-- Cloudflare API tokens
-- local Wrangler auth/config directories
-
-Ignored local/generated directories:
-
-- `node_modules/`
-- `.wrangler/`
-- `.wrangler-config/`
-- `pages-dist/`
