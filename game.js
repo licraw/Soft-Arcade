@@ -1,5 +1,6 @@
 $(
 function() {
+  let utils = window.TileGameUtils;
   let TILE_GAP = 4;
   let STORAGE_KEY = "tileGamePersonalBests";
   let LEVELS = {
@@ -160,10 +161,7 @@ function() {
   }
 
   function formatTime(totalSeconds) {
-    let minutes = Math.floor(totalSeconds / 60);
-    let seconds = totalSeconds % 60;
-
-    return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    return utils.formatTime(totalSeconds);
   }
 
   function formatCompletedAt(completedAt) {
@@ -272,30 +270,11 @@ function() {
   }
 
   function sanitizePlayerName(name) {
-    return (name || "")
-      .trim()
-      .replace(/\s+/g, " ")
-      .slice(0, 12)
-      .toUpperCase();
+    return utils.sanitizePlayerName(name);
   }
 
   function normalizeRuns(runs) {
-    if (!Array.isArray(runs)) {
-      return [];
-    }
-
-    return runs
-      .filter(function(run) {
-        return run && typeof run.name === "string";
-      })
-      .map(function(run) {
-        return {
-          name: sanitizePlayerName(run.name),
-          moves: Number(run.moves) || 0,
-          time: Number(run.time) || 0,
-          completedAt: run.completedAt || new Date().toISOString()
-        };
-      });
+    return utils.normalizeRuns(runs);
   }
 
   function getCurrentLeaderboard() {
@@ -307,13 +286,14 @@ function() {
     let state = leaderboardMeta[currentLevelName] || {};
     let list = $("#leaderboard-list");
     let emptyState = $("#leaderboard-empty");
+    let tableWrap = $("#leaderboard-table-wrap");
 
     $("#leaderboard-level").text(LEVELS[currentLevelName].label);
     list.empty();
     emptyState.addClass("hidden");
+    tableWrap.addClass("hidden");
 
     if (state.loading) {
-      list.addClass("hidden");
       setLeaderboardStatus("Loading scores...", false);
       return;
     }
@@ -325,21 +305,20 @@ function() {
     }
 
     if (!runs.length) {
-      list.addClass("hidden");
       emptyState.removeClass("hidden");
       return;
     }
 
-    list.removeClass("hidden");
+    tableWrap.removeClass("hidden");
 
     $.each(runs, function(index, run) {
       list.append(
-        $("<li></li>").text(
-          run.name + " - " +
-          run.moves + " moves, " +
-          formatTime(run.time) + " - " +
-          formatCompletedAt(run.completedAt)
-        )
+        $("<tr></tr>")
+          .append($("<td></td>").text(index + 1))
+          .append($("<td></td>").text(run.name))
+          .append($("<td></td>").text(run.moves))
+          .append($("<td></td>").text(formatTime(run.time)))
+          .append($("<td></td>").text(formatCompletedAt(run.completedAt)))
       );
     });
 
@@ -446,26 +425,14 @@ function() {
   }
 
   function updateBestForCurrentLevel() {
-    let previousBest = getCurrentBest();
-    let isNewBest = false;
+    let nextBest = utils.getUpdatedBest(getCurrentBest(), moveCount, timerSeconds);
 
-    if (!previousBest || timerSeconds < previousBest.time) {
-      isNewBest = true;
-    }
-
-    if (!previousBest || moveCount < previousBest.moves) {
-      isNewBest = true;
-    }
-
-    if (isNewBest) {
-      bests[currentLevelName] = {
-        time: previousBest ? Math.min(previousBest.time, timerSeconds) : timerSeconds,
-        moves: previousBest ? Math.min(previousBest.moves, moveCount) : moveCount
-      };
+    if (nextBest.isNewBest) {
+      bests[currentLevelName] = nextBest.best;
       saveBests();
     }
 
-    return isNewBest;
+    return nextBest.isNewBest;
   }
 
   function updateWinBest(isNewBest) {
@@ -498,20 +465,33 @@ function() {
   }
 
   function createEmptyBoard() {
-    tiles = [];
-
-    for (let y = 0; y < boardSize; y++) {
-      let row = [];
-
-      for (let x = 0; x < boardSize; x++) {
-        row.push(null);
-      }
-
-      tiles.push(row);
-    }
-
+    tiles = utils.createEmptyGrid(boardSize);
     gapX = boardSize - 1;
     gapY = boardSize - 1;
+  }
+
+  function moveDirection(direction) {
+    let move = utils.moveGap(boardSize, gapX, gapY, direction);
+    let tile;
+
+    if (!move) {
+      return false;
+    }
+
+    tile = tiles[move.tileY][move.tileX];
+    tiles[gapY][gapX] = tile;
+
+    if (move.axis === "y") {
+      tile.data("y", gapY);
+    } else {
+      tile.data("x", gapX);
+    }
+
+    slideTile(tile);
+    gapX = move.nextGapX;
+    gapY = move.nextGapY;
+    tiles[gapY][gapX] = null;
+    return true;
   }
 
   function slideTile(tile, duration) {
@@ -525,59 +505,19 @@ function() {
   }
 
   function down() {
-    if (gapY > 0) {
-      let tile = tiles[gapY - 1][gapX];
-      tiles[gapY][gapX] = tile;
-      tile.data("y", gapY);
-      slideTile(tile);
-      gapY = gapY - 1;
-      tiles[gapY][gapX] = null;
-      return true;
-    }
-
-    return false;
+    return moveDirection("down");
   }
 
   function up() {
-    if (gapY < boardSize - 1) {
-      let tile = tiles[gapY + 1][gapX];
-      tiles[gapY][gapX] = tile;
-      tile.data("y", gapY);
-      slideTile(tile);
-      gapY = gapY + 1;
-      tiles[gapY][gapX] = null;
-      return true;
-    }
-
-    return false;
+    return moveDirection("up");
   }
 
   function right() {
-    if (gapX > 0) {
-      let tile = tiles[gapY][gapX - 1];
-      tiles[gapY][gapX] = tile;
-      tile.data("x", gapX);
-      slideTile(tile);
-      gapX = gapX - 1;
-      tiles[gapY][gapX] = null;
-      return true;
-    }
-
-    return false;
+    return moveDirection("right");
   }
 
   function left() {
-    if (gapX < boardSize - 1) {
-      let tile = tiles[gapY][gapX + 1];
-      tiles[gapY][gapX] = tile;
-      tile.data("x", gapX);
-      slideTile(tile);
-      gapX = gapX + 1;
-      tiles[gapY][gapX] = null;
-      return true;
-    }
-
-    return false;
+    return moveDirection("left");
   }
 
   function positionTiles() {
@@ -628,62 +568,37 @@ function() {
     $("#board .tile").remove();
     createEmptyBoard();
 
-    for (let y = 0; y < boardSize; y++) {
-      for (let x = 0; x < boardSize; x++) {
-        let value = y * boardSize + x + 1;
+    utils.forEachCell(boardSize, function(x, y) {
+      let value = utils.solvedTileValue(boardSize, x, y);
 
-        if (value < boardSize * boardSize) {
-          let tile = $('<div class="tile">' + value + "</div>");
+      if (value < boardSize * boardSize) {
+        let tile = $('<div class="tile">' + value + "</div>");
 
-          $("#board").append(tile);
-          tile.data("x", x).data("y", y);
-          tiles[y][x] = tile;
+        $("#board").append(tile);
+        tile.data("x", x).data("y", y);
+        tiles[y][x] = tile;
 
-          if (x % 2) {
-            tile.css("backgroundColor", "#539fe6");
-          } else {
-            tile.css("backgroundColor", "#ab4b7e");
-          }
+        if (x % 2) {
+          tile.css("backgroundColor", "#539fe6");
+        } else {
+          tile.css("backgroundColor", "#ab4b7e");
         }
       }
-    }
+    });
   }
 
   function scramble() {
     do {
       for (let i = 0; i < scrambleMoves; i++) {
-        let r = Math.random();
-
-        if (r < 0.25) {
-          up();
-        } else if (r < 0.5) {
-          down();
-        } else if (r < 0.75) {
-          left();
-        } else {
-          right();
-        }
+        moveDirection(utils.randomDirection());
       }
     } while (isSolved());
   }
 
   function isSolved() {
-    for (let y = 0; y < boardSize; y++) {
-      for (let x = 0; x < boardSize; x++) {
-        let expectedValue = y * boardSize + x + 1;
-        let tile = tiles[y][x];
-
-        if (x === boardSize - 1 && y === boardSize - 1) {
-          if (tile !== null) {
-            return false;
-          }
-        } else if (!tile || parseInt(tile.text(), 10) !== expectedValue) {
-          return false;
-        }
-      }
-    }
-
-    return true;
+    return utils.isSolvedBoard(tiles, boardSize, function(tile) {
+      return parseInt(tile.text(), 10);
+    });
   }
 
   function maybeShowWinModal() {
@@ -726,13 +641,13 @@ function() {
     $("#board").removeClass("hidden");
     resetScoreSubmissionUi();
     resetStats();
+    setHudExpanded(false);
 
     initTiles();
     resize();
     scramble();
     positionTiles();
     refreshLeaderboard(currentLevelName);
-    setHudExpanded(false);
   }
 
   function isTypingTarget(target) {
@@ -912,7 +827,7 @@ function() {
     $("#restart-button").click(requestRestart);
     $("#main-menu-button").click(requestMainMenu);
     $("#hud-toggle-button").click(function() {
-      $("#hud").toggleClass("hud-expanded");
+      setHudExpanded(!$("#hud").hasClass("hud-expanded"));
     });
     $("#confirm-cancel").click(hideConfirmModal);
     $("#confirm-accept").click(function() {

@@ -138,6 +138,10 @@ body {
     cursor: pointer;
 }
 
+#confirm-cancel {
+    background: #2f9e44;
+    color: #ffffff;
+}
 .icon-button {
     width: 52px;
     height: 52px;
@@ -215,6 +219,11 @@ body {
 
 .modal-confirm {
     max-width: 380px;
+}
+
+.modal-leaderboard {
+    width: min(92vw, 760px);
+    max-width: 760px;
 }
 
 .modal-content h1 {
@@ -312,18 +321,63 @@ body {
     background: #c0392b;
 }
 
-#leaderboard-list {
+#leaderboard-table-wrap {
     margin: 0 0 20px;
-    padding-left: 24px;
-    text-align: left;
+    max-height: min(52vh, 420px);
+    overflow: auto;
+    border: 1px solid rgba(28, 28, 28, 0.18);
+    border-radius: 14px;
+    background: #fffdf9;
 }
 
-#leaderboard-list.hidden {
+#leaderboard-table-wrap.hidden {
     display: none;
 }
 
-#leaderboard-list li {
-    margin-bottom: 10px;
+#leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.96rem;
+}
+
+#leaderboard-table th,
+#leaderboard-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(28, 28, 28, 0.12);
+    vertical-align: top;
+}
+
+#leaderboard-table thead th {
+    position: sticky;
+    top: 0;
+    background: #eef6fb;
+    z-index: 1;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#leaderboard-table tbody tr:nth-child(odd) {
+    background: rgba(63, 135, 166, 0.06);
+}
+
+#leaderboard-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+#leaderboard-table td:first-child,
+#leaderboard-table th:first-child,
+#leaderboard-table td:nth-child(3),
+#leaderboard-table th:nth-child(3),
+#leaderboard-table td:nth-child(4),
+#leaderboard-table th:nth-child(4) {
+    white-space: nowrap;
+}
+
+#leaderboard-table td:nth-child(5),
+#leaderboard-table th:nth-child(5) {
+    min-width: 170px;
 }
 
 html {
@@ -334,6 +388,7 @@ html {
     #hud {
         padding: 14px;
         align-items: stretch;
+        overflow: visible;
     }
 
     .hud-topline {
@@ -346,7 +401,19 @@ html {
 
     #hud-panel {
         display: none;
-        padding-top: 4px;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 50%;
+        width: calc(100% - 28px);
+        max-width: calc(100vw - 28px);
+        transform: translateX(-50%);
+        box-sizing: border-box;
+        padding: 14px;
+        border: 2px solid rgba(28, 28, 28, 0.7);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(32, 69, 104, 0.96), rgba(83, 159, 230, 0.95));
+        box-shadow: 0 18px 36px rgba(7, 17, 28, 0.38);
+        z-index: 4;
     }
 
     #hud.hud-expanded #hud-panel {
@@ -377,5 +444,14 @@ html {
     .icon-button {
         flex: 1 1 0;
         max-width: none;
+    }
+
+    .modal-leaderboard {
+        width: min(94vw, 760px);
+        padding: 24px 16px;
+    }
+
+    #leaderboard-table {
+        min-width: 560px;
     }
 }

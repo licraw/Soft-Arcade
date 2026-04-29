@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400&display=swap" rel="stylesheet">
     <script src="jquery-3.4.1.js"></script>
     <script src="game-config.js"></script>
+    <script src="game-utils.js"></script>
     <script src="game.js"></script>
   </head>
 <body>
@@ -90,11 +91,24 @@
     </div>
   </div>
   <div id="leaderboard-modal" class="modal hidden">
-    <div class="modal-content">
+    <div class="modal-content modal-leaderboard">
       <h1>Leaderboard</h1>
       <p id="leaderboard-level">Medium 4x4</p>
       <p id="leaderboard-status" class="modal-note hidden"></p>
-      <ol id="leaderboard-list"></ol>
+      <div id="leaderboard-table-wrap">
+        <table id="leaderboard-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Name</th>
+              <th scope="col">Moves</th>
+              <th scope="col">Time</th>
+              <th scope="col">Finished</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-list"></tbody>
+        </table>
+      </div>
       <p id="leaderboard-empty" class="hidden">No scores yet for this difficulty.</p>
       <button id="leaderboard-close" type="button">Close</button>
     </div>
