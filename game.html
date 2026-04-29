@@ -64,9 +64,13 @@
         </div>
       </div>
     </div>
+    <div id="scrambler-overlay" class="scrambler-overlay hidden" aria-hidden="true">
+      <div id="scrambler-overlay-character" class="scrambler-character"></div>
+    </div>
   </div>
   <div id="start-menu" class="modal">
     <div class="modal-content">
+      <div id="scrambler-menu-character" class="scrambler-character scrambler-menu" aria-hidden="true"></div>
       <h1 class="game-title">Tile Game Arcade</h1>
       <p class="game-subtitle">Beat the Scrambler</p>
       <p id="scrambler-menu-line" class="scrambler-line">Let&apos;s mix this up.</p>
@@ -96,6 +100,11 @@
   <div id="leaderboard-modal" class="modal hidden">
     <div class="modal-content modal-leaderboard">
       <h1>Leaderboard</h1>
+      <div id="leaderboard-level-switcher" class="leaderboard-level-switcher" role="tablist" aria-label="Leaderboard difficulty">
+        <button class="leaderboard-level-button" type="button" data-level="easy">Easy</button>
+        <button class="leaderboard-level-button" type="button" data-level="medium">Medium</button>
+        <button class="leaderboard-level-button" type="button" data-level="hard">Hard</button>
+      </div>
       <p id="leaderboard-level">Medium 4x4</p>
       <p id="leaderboard-status" class="modal-note hidden"></p>
       <div id="leaderboard-table-wrap">

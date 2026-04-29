@@ -31,14 +31,17 @@ function() {
   let leaderboardCache = {};
   let leaderboardMeta = {};
   let leaderboardRequestId = 0;
+  let leaderboardViewLevel = "medium";
   let pendingSubmission = null;
   let confirmAction = null;
   let touchStartX = null;
   let touchStartY = null;
   let MIN_SWIPE_DISTANCE = 24;
+  let SCRAMBLER_OVERLAY_MS = getScramblerOverlayDuration("medium");
+  let scrambleIntroId = null;
+  let scrambleIntroActive = false;
   let SCRAMBLER_LINES = {
     menu: [
-      "Let’s mix this up.",
       "Fix it. If you can.",
       "Order is overrated.",
       "Try not to embarrass yourself."
@@ -74,6 +77,22 @@ function() {
     return API_BASE_URL + "/api/scores" + query;
   }
 
+  function getScramblerOverlayDuration(levelName) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return 450;
+    }
+
+    switch (levelName) {
+      case "easy":
+        return 1550;
+      case "hard":
+        return 3200;
+      case "medium":
+      default:
+        return 2350;
+    }
+  }
+
   function showModal(selector) {
     $(selector).removeClass("hidden");
   }
@@ -100,9 +119,10 @@ function() {
   }
 
   function showLeaderboardModal() {
+    leaderboardViewLevel = currentLevelName;
     updateLeaderboardModal();
     showModal("#leaderboard-modal");
-    refreshLeaderboard(currentLevelName);
+    refreshLeaderboard(leaderboardViewLevel);
   }
 
   function hideLeaderboardModal() {
@@ -133,6 +153,72 @@ function() {
     $(selector).text(randomScramblerLine(lines));
   }
 
+  function getScramblerMarkup() {
+    return '' +
+      '<div class="scrambler-character-inner">' +
+        '<svg viewBox="-28 0 176 120" role="presentation" focusable="false" aria-hidden="true">' +
+          '<g class="scrambler-arms">' +
+            '<g class="scrambler-arm scrambler-arm-left">' +
+              '<path class="scrambler-limb" d="M29 59 C14 58, -6 68, -8 88 C-10 101, 4 108, 26 97"></path>' +
+              '<path class="scrambler-hand" d="M20 96 L5 104 M20 93 L0 93 M21 90 L6 82"></path>' +
+            '</g>' +
+            '<g class="scrambler-arm scrambler-arm-right">' +
+              '<path class="scrambler-limb" d="M91 59 C106 58, 126 68, 128 88 C130 101, 116 108, 94 97"></path>' +
+              '<path class="scrambler-hand" d="M100 96 L115 104 M100 93 L120 93 M99 90 L114 82"></path>' +
+            '</g>' +
+          '</g>' +
+          '<line class="scrambler-horn" x1="41" y1="22" x2="34" y2="12"></line>' +
+          '<line class="scrambler-horn" x1="79" y1="22" x2="86" y2="12"></line>' +
+          '<line class="scrambler-glitch-bar" x1="15" y1="42" x2="29" y2="42"></line>' +
+          '<line class="scrambler-glitch-bar is-magenta" x1="89" y1="34" x2="104" y2="34"></line>' +
+          '<line class="scrambler-glitch-bar" x1="92" y1="76" x2="107" y2="76"></line>' +
+          '<line class="scrambler-glitch-bar is-magenta" x1="19" y1="84" x2="33" y2="84"></line>' +
+          '<path class="scrambler-face" d="M60 16 L92 34 L102 60 L92 88 L60 104 L28 88 L18 60 L28 34 Z"></path>' +
+          '<path class="scrambler-brow" d="M34 44 L53 39"></path>' +
+          '<path class="scrambler-brow" d="M86 44 L67 39"></path>' +
+          '<path class="scrambler-eye" d="M38 53 L52 47 L49 61 L34 62 Z"></path>' +
+          '<path class="scrambler-eye" d="M82 51 L68 47 L71 60 L86 60 Z"></path>' +
+          '<circle class="scrambler-pupil" cx="46" cy="55" r="2.4"></circle>' +
+          '<circle class="scrambler-pupil" cx="75" cy="54" r="2.1"></circle>' +
+          '<path class="scrambler-mouth" d="M42 75 C48 72, 52 81, 58 78 C65 74, 68 85, 78 72"></path>' +
+          '<path class="scrambler-mouth-accent" d="M44 80 L50 78"></path>' +
+        '</svg>' +
+      '</div>';
+  }
+
+  function mountScramblerCharacters() {
+    $("#scrambler-menu-character").html(getScramblerMarkup());
+    $("#scrambler-overlay-character").html(getScramblerMarkup());
+  }
+
+  function clearScrambleIntroTimer() {
+    if (scrambleIntroId !== null) {
+      window.clearTimeout(scrambleIntroId);
+      scrambleIntroId = null;
+    }
+  }
+
+  function hideScramblerOverlay() {
+    clearScrambleIntroTimer();
+    scrambleIntroActive = false;
+    $("#scrambler-overlay").removeClass("is-active").addClass("hidden");
+  }
+
+  function showScramblerOverlay() {
+    let overlay = $("#scrambler-overlay");
+
+    clearScrambleIntroTimer();
+    scrambleIntroActive = true;
+    overlay.css("--scrambler-overlay-duration", SCRAMBLER_OVERLAY_MS + "ms");
+    overlay.removeClass("hidden is-active");
+    void overlay[0].offsetWidth;
+    overlay.addClass("is-active");
+
+    scrambleIntroId = window.setTimeout(function() {
+      hideScramblerOverlay();
+    }, SCRAMBLER_OVERLAY_MS);
+  }
+
   function resetScoreSubmissionUi() {
     pendingSubmission = null;
     $("#score-name").val("").prop("disabled", false);
@@ -144,6 +230,7 @@ function() {
     gameStarted = false;
     hasWon = false;
     stopTimer();
+    hideScramblerOverlay();
     hideWinModal();
     hideLeaderboardModal();
     $("#win-best-badge").addClass("hidden");
@@ -313,17 +400,28 @@ function() {
   }
 
   function getCurrentLeaderboard() {
-    return leaderboardCache[currentLevelName] || [];
+    return leaderboardCache[leaderboardViewLevel] || [];
+  }
+
+  function updateLeaderboardLevelSwitcher() {
+    $(".leaderboard-level-button").each(function() {
+      let button = $(this);
+      let isActive = button.data("level") === leaderboardViewLevel;
+
+      button.toggleClass("is-active", isActive);
+      button.attr("aria-pressed", isActive ? "true" : "false");
+    });
   }
 
   function updateLeaderboardModal() {
     let runs = getCurrentLeaderboard();
-    let state = leaderboardMeta[currentLevelName] || {};
+    let state = leaderboardMeta[leaderboardViewLevel] || {};
     let list = $("#leaderboard-list");
     let emptyState = $("#leaderboard-empty");
     let tableWrap = $("#leaderboard-table-wrap");
 
-    $("#leaderboard-level").text(LEVELS[currentLevelName].label);
+    $("#leaderboard-level").text(LEVELS[leaderboardViewLevel].label);
+    updateLeaderboardLevelSwitcher();
     list.empty();
     emptyState.addClass("hidden");
     tableWrap.addClass("hidden");
@@ -365,7 +463,7 @@ function() {
 
     leaderboardMeta[levelName] = { loading: true, error: "" };
 
-    if (levelName === currentLevelName) {
+    if (levelName === leaderboardViewLevel) {
       updateLeaderboardModal();
     }
 
@@ -398,7 +496,7 @@ function() {
       };
     }
 
-    if (levelName === currentLevelName) {
+    if (levelName === leaderboardViewLevel) {
       updateLeaderboardModal();
     }
   }
@@ -407,11 +505,13 @@ function() {
     let playerName;
     let response;
     let payload;
+    let submittedLevel;
 
     if (!pendingSubmission) {
       return;
     }
 
+    submittedLevel = pendingSubmission.level;
     playerName = sanitizePlayerName($("#score-name").val());
 
     if (!playerName) {
@@ -443,8 +543,8 @@ function() {
         throw new Error(payload.error || "Score submission failed.");
       }
 
-      leaderboardCache[pendingSubmission.level] = normalizeRuns(payload.scores);
-      leaderboardMeta[pendingSubmission.level] = { loading: false, error: "" };
+      leaderboardCache[submittedLevel] = normalizeRuns(payload.scores);
+      leaderboardMeta[submittedLevel] = { loading: false, error: "" };
       setScoreSubmitStatus("Score saved to the arcade board.", false);
       $("#submit-score-button").text("Saved");
       pendingSubmission = null;
@@ -454,9 +554,19 @@ function() {
       setScoreSubmitStatus(error.message || "Score submission failed.", true);
     }
 
-    if (!$("#leaderboard-modal").hasClass("hidden")) {
+    if (!$("#leaderboard-modal").hasClass("hidden") && submittedLevel === leaderboardViewLevel) {
       updateLeaderboardModal();
     }
+  }
+
+  function showLeaderboardLevel(levelName) {
+    if (!LEVELS[levelName]) {
+      return;
+    }
+
+    leaderboardViewLevel = levelName;
+    updateLeaderboardModal();
+    refreshLeaderboard(levelName);
   }
 
   function updateBestForCurrentLevel() {
@@ -667,6 +777,7 @@ function() {
     currentLevelName = LEVELS[levelName] ? levelName : "medium";
     boardSize = level.size;
     scrambleMoves = level.scrambleMoves;
+    SCRAMBLER_OVERLAY_MS = getScramblerOverlayDuration(currentLevelName);
     hasWon = false;
     gameStarted = true;
 
@@ -681,6 +792,7 @@ function() {
 
     initTiles();
     resize();
+    showScramblerOverlay();
     scramble();
     positionTiles();
     refreshLeaderboard(currentLevelName);
@@ -708,7 +820,7 @@ function() {
       return;
     }
 
-    if (!gameStarted || hasWon) {
+    if (!gameStarted || hasWon || scrambleIntroActive) {
       event.stopPropagation();
       event.preventDefault();
       return;
@@ -762,7 +874,7 @@ function() {
   function tryMove(direction) {
     let moved = false;
 
-    if (!gameStarted || hasWon || !$("#confirm-modal").hasClass("hidden")) {
+    if (!gameStarted || hasWon || scrambleIntroActive || !$("#confirm-modal").hasClass("hidden")) {
       return false;
     }
 
@@ -790,7 +902,7 @@ function() {
   function handleBoardTouchStart(event) {
     let touch;
 
-    if (!gameStarted || hasWon || event.touches.length !== 1) {
+    if (!gameStarted || hasWon || scrambleIntroActive || event.touches.length !== 1) {
       return;
     }
 
@@ -804,7 +916,7 @@ function() {
     let deltaX;
     let deltaY;
 
-    if (touchStartX === null || touchStartY === null || !gameStarted || hasWon) {
+    if (touchStartX === null || touchStartY === null || !gameStarted || hasWon || scrambleIntroActive) {
       touchStartX = null;
       touchStartY = null;
       return;
@@ -830,6 +942,7 @@ function() {
   }
 
   return function() {
+    mountScramblerCharacters();
     $(window).resize(function() {
       if (gameStarted) {
         resize();
@@ -859,6 +972,9 @@ function() {
       if (event.target === this) {
         hideLeaderboardModal();
       }
+    });
+    $(".leaderboard-level-button").click(function() {
+      showLeaderboardLevel($(this).data("level"));
     });
     $("#restart-button").click(requestRestart);
     $("#main-menu-button").click(requestMainMenu);
