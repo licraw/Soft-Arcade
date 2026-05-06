@@ -704,7 +704,7 @@ function() {
 
     $(".tile")
       .css("fontSize", 0.8 * Math.min(tileWidth, tileHeight) + "px")
-      .css("borderRadius", 0.05 * Math.min(tileWidth, tileHeight));
+      .css("borderRadius", 0.035 * Math.min(tileWidth, tileHeight));
 
     positionTiles();
   }
@@ -722,12 +722,7 @@ function() {
         $("#board").append(tile);
         tile.data("x", x).data("y", y);
         tiles[y][x] = tile;
-
-        if (x % 2) {
-          tile.css("backgroundColor", "#539fe6");
-        } else {
-          tile.css("backgroundColor", "#ab4b7e");
-        }
+        tile.addClass(x % 2 ? "tile-cyan" : "tile-magenta");
       }
     });
   }

@@ -15,7 +15,7 @@
 }
 
 .tile {
-    border: 1px solid rgba(234, 234, 240, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     display: inline-block;
     background-color: var(--surface-2);
     text-align: center;
@@ -23,6 +23,23 @@
     height: 10px;
     position: absolute;
     box-sizing: border-box;
+    color: #F4F7FF;
+    font-weight: 700;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.22),
+        inset 0 -4px 0 rgba(0, 0, 0, 0.28),
+        0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.tile.tile-cyan {
+    background:
+        linear-gradient(180deg, #00C2D8 0%, #00718A 100%);
+}
+
+.tile.tile-magenta {
+    background:
+        linear-gradient(180deg, #FF4D5A 0%, #8E1F2E 100%);
 }
 
 .hidden {

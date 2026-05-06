@@ -2,7 +2,7 @@
   "name": "jquery-tile-game",
   "private": true,
   "scripts": {
-    "build:pages": "mkdir -p pages-dist && cp game.html pages-dist/index.html && cp game.html game.css game.js game-config.js jquery-3.4.1.js pages-dist/",
+    "build:pages": "mkdir -p pages-dist && cp game.html pages-dist/index.html && cp game.html game.css game.js game-utils.js game-config.js jquery-3.4.1.js pages-dist/",
     "deploy:pages": "npm run build:pages && wrangler pages deploy pages-dist --project-name=tile-game-arcade",
     "dev:worker": "wrangler dev",
     "deploy:worker": "wrangler deploy",
