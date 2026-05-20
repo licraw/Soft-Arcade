@@ -165,6 +165,7 @@
 .gameFrame :global(#menu-leaderboard-button),
 .gameFrame :global(#leaderboard-close),
 .gameFrame :global(#submit-score-button),
+.gameFrame :global(#play-again-button),
 .gameFrame :global(#win-modal-close),
 .gameFrame :global(#confirm-cancel),
 .gameFrame :global(#confirm-accept) {
@@ -212,6 +213,7 @@
 }
 
 .gameFrame :global(#submit-score-button),
+.gameFrame :global(#play-again-button),
 .gameFrame :global(#win-modal-close),
 .gameFrame :global(#confirm-cancel) {
     margin-left: 0;
@@ -263,6 +265,34 @@
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
 }
 
+.gameFrame :global(#win-modal:not(.hidden) .modal-content) {
+    animation: win-modal-rise 180ms ease-out both;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > *) {
+    animation: win-content-reveal 220ms ease-out both;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > :nth-child(2)) {
+    animation-delay: 35ms;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > :nth-child(3)) {
+    animation-delay: 70ms;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > :nth-child(4)) {
+    animation-delay: 105ms;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > :nth-child(5)) {
+    animation-delay: 140ms;
+}
+
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > :nth-child(n + 6)) {
+    animation-delay: 175ms;
+}
+
 .gameFrame :global(.modal-confirm) {
     max-width: 380px;
 }
@@ -294,14 +324,79 @@
     font-weight: 700;
     border: 1px solid rgba(255, 46, 209, 0.28);
     box-shadow: var(--glow-magenta);
+    animation: best-badge-pulse 1.6s ease-in-out infinite;
 }
 
 .gameFrame :global(#win-best-badge.hidden) {
     display: none;
 }
 
+.gameFrame :global(#play-again-button.hidden),
+.gameFrame :global(#submit-score-button.hidden) {
+    display: none;
+}
+
 .gameFrame :global(.modal-content button) {
     cursor: pointer;
+}
+
+.gameFrame :global(#win-modal .modal-content) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.gameFrame :global(#win-modal .modal-content h1),
+.gameFrame :global(#win-modal .modal-content p),
+.gameFrame :global(#win-modal .modal-content label) {
+    align-self: center;
+}
+
+.gameFrame :global(#play-again-button) {
+    margin-top: 4px;
+    min-height: 50px;
+    background: var(--cyan);
+    color: #061016;
+    border-color: rgba(0, 229, 255, 0.58);
+    font-weight: 800;
+    box-shadow: var(--glow-cyan);
+}
+
+.gameFrame :global(#submit-score-button) {
+    min-height: 50px;
+    background: var(--cyan);
+    color: #061016;
+    border-color: rgba(0, 229, 255, 0.58);
+    font-weight: 800;
+    box-shadow: var(--glow-cyan);
+}
+
+.gameFrame :global(#submit-score-button:disabled) {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.gameFrame :global(#submit-score-button:hover:not(:disabled)),
+.gameFrame :global(#submit-score-button:focus-visible:not(:disabled)),
+.gameFrame :global(#play-again-button:hover),
+.gameFrame :global(#play-again-button:focus-visible) {
+    transform: translateY(-1px);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.18), var(--glow-cyan);
+}
+
+.gameFrame :global(#win-modal-close) {
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    border-color: rgba(234, 234, 240, 0.1);
+}
+
+.gameFrame :global(#win-modal-close:hover),
+.gameFrame :global(#win-modal-close:focus-visible) {
+    color: var(--text);
+    border-color: rgba(234, 234, 240, 0.2);
+    outline: none;
 }
 
 .gameFrame :global(.confirm-actions) {
@@ -342,6 +437,10 @@
 
 .gameFrame :global(.modal-note.error) {
     color: var(--red);
+}
+
+.gameFrame :global(.modal-note.success) {
+    color: var(--green);
 }
 
 .gameFrame :global(.game-title) {
@@ -683,6 +782,41 @@
     }
 }
 
+@keyframes win-modal-rise {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes win-content-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes best-badge-pulse {
+    0%,
+    100% {
+        box-shadow: var(--glow-magenta);
+    }
+
+    50% {
+        box-shadow: 0 0 24px rgba(255, 46, 209, 0.32);
+    }
+}
+
 @keyframes scrambler-glow {
     0%,
     100% {
@@ -794,7 +928,10 @@
 .gameFrame :global(.scrambler-menu .scrambler-character-inner),
 .gameFrame :global(.scrambler-overlay .scrambler-character),
 .gameFrame :global(.scrambler-overlay .scrambler-character-inner),
-.gameFrame :global(.scrambler-overlay.is-active) {
+.gameFrame :global(.scrambler-overlay.is-active),
+.gameFrame :global(#win-modal:not(.hidden) .modal-content),
+.gameFrame :global(#win-modal:not(.hidden) .modal-content > *),
+.gameFrame :global(#win-best-badge) {
         animation: none !important;
     }
 
