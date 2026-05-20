@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DailyScramble } from "@/components/DailyScramble";
 import { ScramblerMascot } from "@/components/ScramblerMascot";
 import { games } from "@/games/registry";
 
@@ -61,6 +62,10 @@ export default function HomePage() {
           </div>
           <span className="featured-game-cta">Start a run</span>
         </Link>
+      </section>
+
+      <section className="content-section daily-scramble-section">
+        <DailyScramble />
       </section>
     </main>
   );

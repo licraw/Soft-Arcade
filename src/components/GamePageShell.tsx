@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { GameDefinition } from "@/games/registry";
 import { AdSlot } from "./AdSlot";
+import { DailyScramble } from "./DailyScramble";
 import { Leaderboard } from "./Leaderboard";
 
 type GamePageShellProps = {
@@ -21,6 +22,7 @@ export function GamePageShell({ game, children }: GamePageShellProps) {
         <div className="game-stage">{children}</div>
         <aside className="game-rail" aria-label="Game side panel">
           <Leaderboard />
+          <DailyScramble compact />
           <AdSlot />
         </aside>
       </section>
