@@ -45,6 +45,7 @@ export function mountBeatTheScrambler() {
   let SCRAMBLER_OVERLAY_MS = getScramblerOverlayDuration("medium");
   let scrambleIntroId = null;
   let scrambleIntroActive = false;
+  let EVENT_NAMESPACE = ".beatTheScrambler";
   let SCRAMBLER_LINES = {
     menu: [
       "Fix it. If you can.",
@@ -942,47 +943,67 @@ export function mountBeatTheScrambler() {
   }
 
   function init() {
+    $(window).off(EVENT_NAMESPACE);
+    $(document).off(EVENT_NAMESPACE);
+    $("#board").off(EVENT_NAMESPACE);
+    $("#win-modal-close").off(EVENT_NAMESPACE);
+    $("#win-modal").off(EVENT_NAMESPACE);
+    $("#submit-score-button").off(EVENT_NAMESPACE);
+    $("#score-name").off(EVENT_NAMESPACE);
+    $("#leaderboard-button").off(EVENT_NAMESPACE);
+    $("#menu-leaderboard-button").off(EVENT_NAMESPACE);
+    $("#leaderboard-close").off(EVENT_NAMESPACE);
+    $("#leaderboard-modal").off(EVENT_NAMESPACE);
+    $(".leaderboard-level-button").off(EVENT_NAMESPACE);
+    $("#restart-button").off(EVENT_NAMESPACE);
+    $("#main-menu-button").off(EVENT_NAMESPACE);
+    $("#hud-toggle-button").off(EVENT_NAMESPACE);
+    $("#confirm-cancel").off(EVENT_NAMESPACE);
+    $("#confirm-accept").off(EVENT_NAMESPACE);
+    $("#confirm-modal").off(EVENT_NAMESPACE);
+    $(".level-button").off(EVENT_NAMESPACE);
+
     mountScramblerCharacters();
-    $(window).resize(function() {
+    $(window).on("resize" + EVENT_NAMESPACE, function() {
       if (gameStarted) {
         resize();
       }
     });
 
-    $(document).keydown(keydown);
-    $("#board").on("touchstart", handleBoardTouchStart);
-    $("#board").on("touchend", handleBoardTouchEnd);
-    $("#win-modal-close").click(returnToMainMenu);
-    $("#win-modal").click(function(event) {
+    $(document).on("keydown" + EVENT_NAMESPACE, keydown);
+    $("#board").on("touchstart" + EVENT_NAMESPACE, handleBoardTouchStart);
+    $("#board").on("touchend" + EVENT_NAMESPACE, handleBoardTouchEnd);
+    $("#win-modal-close").on("click" + EVENT_NAMESPACE, returnToMainMenu);
+    $("#win-modal").on("click" + EVENT_NAMESPACE, function(event) {
       if (event.target === this) {
         returnToMainMenu();
       }
     });
-    $("#submit-score-button").click(submitScore);
-    $("#score-name").on("keydown", function(event) {
+    $("#submit-score-button").on("click" + EVENT_NAMESPACE, submitScore);
+    $("#score-name").on("keydown" + EVENT_NAMESPACE, function(event) {
       if (event.which === 13) {
         event.preventDefault();
         submitScore();
       }
     });
-    $("#leaderboard-button").click(showLeaderboardModal);
-    $("#menu-leaderboard-button").click(showLeaderboardModal);
-    $("#leaderboard-close").click(hideLeaderboardModal);
-    $("#leaderboard-modal").click(function(event) {
+    $("#leaderboard-button").on("click" + EVENT_NAMESPACE, showLeaderboardModal);
+    $("#menu-leaderboard-button").on("click" + EVENT_NAMESPACE, showLeaderboardModal);
+    $("#leaderboard-close").on("click" + EVENT_NAMESPACE, hideLeaderboardModal);
+    $("#leaderboard-modal").on("click" + EVENT_NAMESPACE, function(event) {
       if (event.target === this) {
         hideLeaderboardModal();
       }
     });
-    $(".leaderboard-level-button").click(function() {
+    $(".leaderboard-level-button").on("click" + EVENT_NAMESPACE, function() {
       showLeaderboardLevel($(this).data("level"));
     });
-    $("#restart-button").click(requestRestart);
-    $("#main-menu-button").click(requestMainMenu);
-    $("#hud-toggle-button").click(function() {
+    $("#restart-button").on("click" + EVENT_NAMESPACE, requestRestart);
+    $("#main-menu-button").on("click" + EVENT_NAMESPACE, requestMainMenu);
+    $("#hud-toggle-button").on("click" + EVENT_NAMESPACE, function() {
       setHudExpanded(!$("#hud").hasClass("hud-expanded"));
     });
-    $("#confirm-cancel").click(hideConfirmModal);
-    $("#confirm-accept").click(function() {
+    $("#confirm-cancel").on("click" + EVENT_NAMESPACE, hideConfirmModal);
+    $("#confirm-accept").on("click" + EVENT_NAMESPACE, function() {
       let action = confirmAction;
 
       hideConfirmModal();
@@ -991,12 +1012,12 @@ export function mountBeatTheScrambler() {
         action();
       }
     });
-    $("#confirm-modal").click(function(event) {
+    $("#confirm-modal").on("click" + EVENT_NAMESPACE, function(event) {
       if (event.target === this) {
         hideConfirmModal();
       }
     });
-    $(".level-button").click(function() {
+    $(".level-button").on("click" + EVENT_NAMESPACE, function() {
       startGame($(this).data("level"));
     });
 
@@ -1006,4 +1027,29 @@ export function mountBeatTheScrambler() {
   }
 
   init();
+
+  return function cleanupBeatTheScrambler() {
+    stopTimer();
+    clearScrambleIntroTimer();
+    $(window).off(EVENT_NAMESPACE);
+    $(document).off(EVENT_NAMESPACE);
+    $("#board").off(EVENT_NAMESPACE).addClass("hidden");
+    $("#board .tile").remove();
+    $("#win-modal-close").off(EVENT_NAMESPACE);
+    $("#win-modal").off(EVENT_NAMESPACE);
+    $("#submit-score-button").off(EVENT_NAMESPACE);
+    $("#score-name").off(EVENT_NAMESPACE);
+    $("#leaderboard-button").off(EVENT_NAMESPACE);
+    $("#menu-leaderboard-button").off(EVENT_NAMESPACE);
+    $("#leaderboard-close").off(EVENT_NAMESPACE);
+    $("#leaderboard-modal").off(EVENT_NAMESPACE);
+    $(".leaderboard-level-button").off(EVENT_NAMESPACE);
+    $("#restart-button").off(EVENT_NAMESPACE);
+    $("#main-menu-button").off(EVENT_NAMESPACE);
+    $("#hud-toggle-button").off(EVENT_NAMESPACE);
+    $("#confirm-cancel").off(EVENT_NAMESPACE);
+    $("#confirm-accept").off(EVENT_NAMESPACE);
+    $("#confirm-modal").off(EVENT_NAMESPACE);
+    $(".level-button").off(EVENT_NAMESPACE);
+  };
 }

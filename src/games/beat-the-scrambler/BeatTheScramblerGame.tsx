@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import styles from "./styles.module.css";
 
 type JQueryGlobal = {
@@ -23,16 +23,9 @@ function installJQueryGlobal(jqueryModule: unknown) {
 }
 
 export function BeatTheScramblerGame() {
-  const mountedRef = useRef(false);
-
   useEffect(() => {
     let isMounted = true;
-
-    if (mountedRef.current) {
-      return;
-    }
-
-    mountedRef.current = true;
+    let cleanupGame: (() => void) | undefined;
 
     async function mountGame() {
       const jqueryModule = await import("./jquery-3.4.1.js");
@@ -47,7 +40,7 @@ export function BeatTheScramblerGame() {
       const { mountBeatTheScrambler } = await import("./mountBeatTheScrambler.js");
 
       if (isMounted) {
-        mountBeatTheScrambler();
+        cleanupGame = mountBeatTheScrambler();
       }
     }
 
@@ -55,6 +48,7 @@ export function BeatTheScramblerGame() {
 
     return () => {
       isMounted = false;
+      cleanupGame?.();
     };
   }, []);
 
