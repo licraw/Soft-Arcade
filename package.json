@@ -1,16 +1,30 @@
 {
-  "name": "jquery-tile-game",
+  "name": "soft-arcade",
+  "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
-    "build:pages": "mkdir -p pages-dist && cp game.html pages-dist/index.html && cp game.html game.css game.js game-utils.js game-config.js jquery-3.4.1.js pages-dist/",
-    "deploy:pages": "npm run build:pages && wrangler pages deploy pages-dist --project-name=tile-game-arcade",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "deploy:pages": "npm run build && wrangler pages deploy .next --project-name=soft-arcade",
     "dev:worker": "wrangler dev",
     "deploy:worker": "wrangler deploy",
     "db:create": "wrangler d1 create tile-game-scores",
     "db:migrate:local": "wrangler d1 migrations apply tile-game-scores --local",
     "db:migrate:remote": "wrangler d1 migrations apply tile-game-scores"
   },
+  "dependencies": {
+    "next": "^16.2.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
   "devDependencies": {
+    "@types/node": "20.17.6",
+    "@types/react": "19.2.15",
+    "typescript": "5.8.2",
     "wrangler": "^4.14.1"
   }
 }
