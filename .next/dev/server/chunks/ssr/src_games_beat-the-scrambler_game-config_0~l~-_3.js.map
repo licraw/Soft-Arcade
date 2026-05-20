@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/dylancrawshaw/Desktop/jquery-tile-game/src/games/beat-the-scrambler/game-config.js"],"sourcesContent":["window.TILE_GAME_CONFIG = window.TILE_GAME_CONFIG || {\n  apiBaseUrl: \"https://tile-game-scores.ltcrawshaw.workers.dev\"\n};\n\nexport {};\n"],"names":["window","TILE_GAME_CONFIG","apiBaseUrl"],"mappings":";AAAAA,OAAOC,gBAAgB,GAAGD,OAAOC,gBAAgB,IAAI;IACnDC,YAAY;AACd"}}]
-}
