@@ -1,9 +1,13 @@
 export const SCORE_TUNING = {
   distanceMultiplier: 0.018,
   survivalMultiplier: 8,
+  speedMultiplier: 0.24,
   nearMissBase: 250,
   streakStep: 75,
-  streakCap: 6
+  streakCap: 6,
+  comboWindow: 2.35,
+  brakingScorePenalty: 0.9,
+  brakingNearMissPenalty: 0.82
 };
 
 export function getDistanceScore(distance: number) {
@@ -12,6 +16,12 @@ export function getDistanceScore(distance: number) {
 
 export function getSurvivalScore(elapsedSeconds: number) {
   return Math.floor(elapsedSeconds * SCORE_TUNING.survivalMultiplier);
+}
+
+export function getSpeedScore(speed: number, baselineSpeed: number, elapsedSeconds: number) {
+  const speedRatio = Math.max(0, speed / baselineSpeed - 0.75);
+
+  return Math.floor(speedRatio * elapsedSeconds * SCORE_TUNING.speedMultiplier * 100);
 }
 
 export function getNearMissBonus(streak: number) {

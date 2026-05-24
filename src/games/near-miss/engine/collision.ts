@@ -4,11 +4,29 @@ export function intersects(a: CarBounds, b: CarBounds) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-export function isNearMiss(player: CarBounds, traffic: CarBounds) {
-  const verticalOverlap = player.y < traffic.y + traffic.height * 0.92 && player.y + player.height > traffic.y + traffic.height * 0.08;
-  const horizontalGap = Math.max(traffic.x - (player.x + player.width), player.x - (traffic.x + traffic.width));
+export function insetBounds(bounds: CarBounds, widthScale: number, heightScale: number): CarBounds {
+  const width = bounds.width * widthScale;
+  const height = bounds.height * heightScale;
 
-  return verticalOverlap && horizontalGap > 0 && horizontalGap <= player.width * 0.58;
+  return {
+    x: bounds.x + (bounds.width - width) / 2,
+    y: bounds.y + (bounds.height - height) / 2,
+    width,
+    height
+  };
+}
+
+export function expandBounds(bounds: CarBounds, growX: number, growY: number): CarBounds {
+  return {
+    x: bounds.x - growX,
+    y: bounds.y - growY,
+    width: bounds.width + growX * 2,
+    height: bounds.height + growY * 2
+  };
+}
+
+export function isNearMissShellOverlap(playerShell: CarBounds, trafficShell: CarBounds, playerHitbox: CarBounds, trafficHitbox: CarBounds) {
+  return !intersects(playerHitbox, trafficHitbox) && intersects(playerShell, trafficShell);
 }
 
 export function hasPlayerPassedTraffic(player: CarBounds, traffic: CarBounds) {

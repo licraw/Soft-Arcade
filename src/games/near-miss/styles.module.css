@@ -56,7 +56,7 @@
 
 .startPanel,
 :global(.near-miss-modal-panel) {
-  width: min(390px, 100%);
+  width: min(440px, 100%);
   padding: 28px;
   border: 1px solid rgba(0, 229, 255, 0.22);
   border-radius: 8px;
@@ -90,6 +90,31 @@
   margin: 14px auto 0;
   color: #b8b3aa;
   line-height: 1.55;
+}
+
+:global(.near-miss-final-score) {
+  display: grid;
+  gap: 4px;
+  margin: 18px auto 0;
+}
+
+:global(.near-miss-run-end-title) {
+  animation: near-miss-title-settle 220ms ease-out both;
+}
+
+:global(.near-miss-final-score span) {
+  color: #b8b3aa;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:global(.near-miss-final-score strong) {
+  color: #f4f2ee;
+  font-size: clamp(2rem, 9vw, 3.6rem);
+  line-height: 0.95;
+  text-shadow: 0 0 18px rgba(0, 229, 255, 0.18);
 }
 
 .startPanel button,
@@ -235,20 +260,40 @@
 }
 
 :global(.near-miss-run-stats) {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 :global(.near-miss-run-stats span) {
-  padding: 7px 10px;
-  border: 1px solid rgba(244, 242, 238, 0.12);
-  border-radius: 999px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 72px;
+  padding: 10px 8px;
+  border: 1px solid rgba(244, 242, 238, 0.1);
+  border-radius: 8px;
+  background: rgba(7, 8, 13, 0.32);
   color: #f4f2ee;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+:global(.near-miss-run-stats small) {
+  color: #b8b3aa;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+:global(.near-miss-run-stats strong) {
+  color: #f4f2ee;
+  font-size: clamp(0.95rem, 3.2vw, 1.18rem);
+  line-height: 1.1;
 }
 
 @keyframes near-miss-ready-pulse {
@@ -261,6 +306,18 @@
   50% {
     opacity: 1;
     transform: translateX(-50%) translateY(-2px);
+  }
+}
+
+@keyframes near-miss-title-settle {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -314,5 +371,13 @@
 
   .feedbackLine {
     top: 58px;
+  }
+
+  :global(.near-miss-run-stats) {
+    grid-template-columns: 1fr;
+  }
+
+  :global(.near-miss-run-stats span) {
+    min-height: 58px;
   }
 }

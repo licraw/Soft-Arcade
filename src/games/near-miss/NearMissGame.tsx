@@ -13,6 +13,7 @@ const initialSnapshot: NearMissSnapshot = {
   status: "ready",
   score: 0,
   speed: 0,
+  averageSpeed: 0,
   distance: 0,
   elapsed: 0,
   nearMisses: 0,
