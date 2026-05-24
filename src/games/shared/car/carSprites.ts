@@ -82,9 +82,12 @@ export function drawArcadeCar(ctx: CanvasRenderingContext2D, options: CarSpriteO
 }
 
 export function drawPlayerCar(ctx: CanvasRenderingContext2D, options: CarSpriteOptions) {
-  const { x, y, width, height } = options;
+  const { x, y, width, height, yawDeg = 0 } = options;
 
   ctx.save();
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.rotate((yawDeg * Math.PI) / 180);
+  ctx.translate(-x - width / 2, -y - height / 2);
   ctx.shadowColor = "rgba(0, 229, 255, 0.58)";
   ctx.shadowBlur = 24;
   ctx.strokeStyle = "rgba(244, 242, 238, 0.92)";
@@ -93,9 +96,12 @@ export function drawPlayerCar(ctx: CanvasRenderingContext2D, options: CarSpriteO
   ctx.stroke();
   ctx.restore();
 
+  ctx.save();
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.rotate((yawDeg * Math.PI) / 180);
+  ctx.translate(-x - width / 2, -y - height / 2);
   drawArcadeCar(ctx, options);
 
-  ctx.save();
   ctx.fillStyle = "rgba(250, 204, 21, 0.9)";
   roundedRect(ctx, x + width * 0.18, y + height * 0.78, width * 0.64, height * 0.08, 4);
   ctx.fill();

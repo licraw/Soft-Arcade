@@ -27,4 +27,5 @@ export type CarSpriteOptions = {
   height: number;
   palette: CarPalette;
   direction?: "up" | "down";
+  yawDeg?: number;
 };
