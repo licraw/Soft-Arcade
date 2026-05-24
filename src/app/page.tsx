@@ -5,6 +5,7 @@ import { games } from "@/games/registry";
 
 export default function HomePage() {
   const featuredGame = games[0];
+  const arcadeShelf = games.slice(1);
 
   return (
     <main>
@@ -67,6 +68,23 @@ export default function HomePage() {
       <section className="content-section daily-scramble-section">
         <DailyScramble />
       </section>
+
+      {arcadeShelf.length ? (
+        <section className="content-section">
+          <div className="section-heading">
+            <p className="eyebrow">Arcade Shelf</p>
+            <h2>More Games</h2>
+          </div>
+          <div className="game-card-grid">
+            {arcadeShelf.map((game) => (
+              <Link className="game-card" href={`/games/${game.slug}`} key={game.id}>
+                <span>{game.title}</span>
+                <p>{game.shortDescription}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

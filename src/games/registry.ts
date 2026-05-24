@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { BeatTheScramblerGame } from "./beat-the-scrambler";
+import { NearMissGame } from "./near-miss";
 
 export type GameDefinition = {
   id: string;
@@ -27,6 +28,22 @@ export const games: GameDefinition[] = [
     ],
     type: "vanilla",
     component: BeatTheScramblerGame
+  },
+  {
+    id: "near-miss",
+    slug: "near-miss",
+    title: "Near Miss",
+    shortDescription: "Thread soft-neon traffic lanes, skim close calls, and keep a clean run alive as speed climbs.",
+    description:
+      "A fast canvas arcade driver about lane switching, survival, close-call bonuses, and streak-driven score chasing.",
+    instructions: [
+      "Hold ArrowLeft and ArrowRight, or A and D, to steer smoothly across the road.",
+      "Use ArrowUp or W to push speed, and ArrowDown or S to brake through tight gaps.",
+      "On touch screens, press the left or right side of the game area to steer.",
+      "Avoid traffic, skim close calls for bonus points, and chain near misses to build a streak."
+    ],
+    type: "react",
+    component: NearMissGame
   }
 ];
 
