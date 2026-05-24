@@ -1,0 +1,318 @@
+.gameFrame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 82% 72%, rgba(255, 46, 209, 0.12), transparent 28%),
+    #08090f;
+  color: #f4f2ee;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.feedbackLine {
+  position: absolute;
+  left: 50%;
+  top: 78px;
+  z-index: 3;
+  min-width: min(220px, calc(100% - 32px));
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  border-radius: 999px;
+  background: rgba(8, 9, 15, 0.42);
+  color: #facc15;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  animation: near-miss-ready-pulse 1.8s ease-in-out infinite;
+}
+
+.startOverlay,
+:global(.near-miss-modal) {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(5, 6, 12, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.startPanel,
+:global(.near-miss-modal-panel) {
+  width: min(390px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(0, 229, 255, 0.1), transparent 48%),
+    rgba(18, 20, 29, 0.94);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  text-align: center;
+}
+
+.startPanel p,
+:global(.near-miss-modal-kicker) {
+  margin: 0 0 8px;
+  color: #facc15;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.startPanel h2,
+:global(.near-miss-modal-panel h2) {
+  margin: 0;
+  font-size: clamp(2.1rem, 8vw, 4rem);
+  line-height: 0.95;
+}
+
+.startPanel span,
+:global(.near-miss-modal-panel p) {
+  display: block;
+  margin: 14px auto 0;
+  color: #b8b3aa;
+  line-height: 1.55;
+}
+
+.startPanel button,
+:global(.near-miss-modal-panel button) {
+  min-height: 46px;
+  margin-top: 22px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  background: #7dd3fc;
+  color: #061016;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+:global(.near-miss-hud) {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  pointer-events: none;
+}
+
+:global(.near-miss-hud-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+:global(.near-miss-hud-left) {
+  justify-content: flex-start;
+}
+
+:global(.near-miss-hud-right) {
+  justify-content: flex-end;
+}
+
+:global(.car-score-pill),
+:global(.car-speedometer) {
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 9px 7px;
+  border: 1px solid rgba(244, 242, 238, 0.08);
+  border-radius: 7px;
+  background: rgba(7, 8, 13, 0.46);
+  box-shadow: none;
+  backdrop-filter: blur(9px);
+}
+
+:global(.car-score-pill span),
+:global(.car-speedometer span),
+:global(.car-speedometer small) {
+  display: block;
+  overflow: hidden;
+  color: #b8b3aa;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+:global(.car-score-pill strong),
+:global(.car-speedometer strong) {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #f4f2ee;
+  font-size: clamp(0.92rem, 1.6vw, 1.08rem);
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.car-score-pill) {
+  min-width: 74px;
+}
+
+:global(.car-speedometer) {
+  border-color: rgba(125, 211, 252, 0.24);
+  min-width: 70px;
+  text-align: right;
+}
+
+:global(.car-speedometer strong),
+:global(.car-speedometer small) {
+  display: inline;
+}
+
+:global(.car-speedometer small) {
+  margin-left: 3px;
+  color: rgba(184, 179, 170, 0.82);
+}
+
+:global(.car-score-pill-cyan) {
+  border-color: rgba(0, 229, 255, 0.18);
+}
+
+:global(.car-score-pill-gold) {
+  border-color: rgba(250, 204, 21, 0.18);
+}
+
+:global(.car-score-pill-pink) {
+  border-color: rgba(255, 46, 209, 0.18);
+}
+
+:global(.car-score-pill-green) {
+  border-color: rgba(60, 255, 143, 0.16);
+}
+
+:global(.near-miss-hud-center) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid rgba(250, 204, 21, 0.14);
+  border-radius: 999px;
+  background: rgba(7, 8, 13, 0.32);
+  color: #facc15;
+  backdrop-filter: blur(8px);
+}
+
+:global(.near-miss-hud-center span) {
+  color: rgba(244, 242, 238, 0.68);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:global(.near-miss-hud-center strong) {
+  font-size: 0.94rem;
+  line-height: 1;
+}
+
+:global(.near-miss-run-stats) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+:global(.near-miss-run-stats span) {
+  padding: 7px 10px;
+  border: 1px solid rgba(244, 242, 238, 0.12);
+  border-radius: 999px;
+  color: #f4f2ee;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+@keyframes near-miss-ready-pulse {
+  0%,
+  100% {
+    opacity: 0.74;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-2px);
+  }
+}
+
+@media (max-width: 720px) {
+  :global(.near-miss-hud) {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  :global(.near-miss-hud-group) {
+    gap: 5px;
+  }
+
+  .feedbackLine {
+    top: 66px;
+  }
+}
+
+@media (max-width: 480px) {
+  :global(.near-miss-hud) {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  :global(.car-score-pill),
+  :global(.car-speedometer) {
+    min-height: 34px;
+    min-width: 58px;
+    padding: 5px 7px 6px;
+  }
+
+  :global(.car-score-pill span),
+  :global(.car-speedometer span),
+  :global(.car-speedometer small) {
+    font-size: 0.52rem;
+  }
+
+  :global(.car-score-pill strong),
+  :global(.car-speedometer strong) {
+    font-size: 0.86rem;
+  }
+
+  :global(.near-miss-hud-center) {
+    padding: 4px 7px;
+  }
+
+  :global(.near-miss-hud-center span) {
+    display: none;
+  }
+
+  .feedbackLine {
+    top: 58px;
+  }
+}
