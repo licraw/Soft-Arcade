@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 192" role="img" aria-labelledby="title desc">
+  <title id="title">Near Miss traffic sedan</title>
+  <desc id="desc">Top-down gold sedan traffic sprite with transparent background.</desc>
+  <defs>
+    <linearGradient id="body" x1="0" x2="0" y1="18" y2="178" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe27a"/>
+      <stop offset="0.52" stop-color="#d7a925"/>
+      <stop offset="1" stop-color="#8d6514"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="42" y2="130" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#263940"/>
+      <stop offset="1" stop-color="#10151a"/>
+    </linearGradient>
+    <filter id="softGlow" x="-35%" y="-25%" width="170%" height="150%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#facc15" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <g filter="url(#softGlow)">
+    <path fill="url(#body)" d="M64 18c20 0 33 7 40 22 6 14 8 38 8 73 0 32-3 52-9 60-8 7-21 10-39 10s-31-3-39-10c-6-8-9-28-9-60 0-35 2-59 8-73 7-15 20-22 40-22Z"/>
+    <path fill="#9e7418" d="M27 65c-5 18-7 39-7 66l9-3c1-24 4-45 9-63H27Zm74 0c5 18 8 39 9 63l9 3c0-27-2-48-7-66h-11Z" opacity="0.68"/>
+    <path fill="url(#glass)" d="M38 58c8-17 16-24 26-24s18 7 26 24c-9 5-18 7-26 7s-17-2-26-7Z"/>
+    <path fill="#121820" d="M35 111c9 5 19 7 29 7s20-2 29-7c5 12 10 25 15 39-10 7-25 11-44 11s-34-4-44-11c5-14 10-27 15-39Z"/>
+    <path fill="#fff1a8" d="M31 37c7-4 17-7 28-7l-1 6c-10 1-18 3-25 6l-2-5Zm66 0c-7-4-17-7-28-7l1 6c10 1 18 3 25 6l2-5Z" opacity="0.9"/>
+    <path fill="#101116" d="M13 79h9v27h-9V79Zm93 0h9v27h-9V79Zm-93 47h9v28h-9v-28Zm93 0h9v28h-9v-28Z" opacity="0.64"/>
+  </g>
+</svg>

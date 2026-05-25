@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 192" role="img" aria-labelledby="title desc">
+  <title id="title">Near Miss traffic van truck</title>
+  <desc id="desc">Top-down muted green van-truck traffic sprite with transparent background.</desc>
+  <defs>
+    <linearGradient id="body" x1="0" x2="0" y1="10" y2="184" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8dd6c2"/>
+      <stop offset="0.48" stop-color="#477d82"/>
+      <stop offset="1" stop-color="#263d48"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="34" y2="74" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#263a43"/>
+      <stop offset="1" stop-color="#0c1218"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-20%" width="160%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#3cff8f" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <g filter="url(#softGlow)">
+    <path fill="url(#body)" d="M64 10c26 0 43 8 49 24 4 12 6 36 6 73v51c0 17-11 26-33 26H42c-22 0-33-9-33-26v-51c0-37 2-61 6-73 6-16 23-24 49-24Z"/>
+    <path fill="#172631" d="M25 82h78c5 20 7 47 7 80-7 7-22 11-46 11s-39-4-46-11c0-33 2-60 7-80Z" opacity="0.5"/>
+    <path fill="url(#glass)" d="M31 42c8-12 19-17 33-17s25 5 33 17c-7 8-18 12-33 12s-26-4-33-12Z"/>
+    <path fill="none" stroke="#a7f3d0" stroke-linecap="round" stroke-width="3" d="M27 83h74M25 122h78M27 158h74"/>
+    <path fill="#f4f2ee" d="M28 28c8-4 18-6 31-7v6c-11 1-21 3-29 7l-2-6Zm72 0c-8-4-18-6-31-7v6c11 1 21 3 29 7l2-6Z" opacity="0.62"/>
+    <path fill="#080b10" d="M6 70h12v35H6V70Zm104 0h12v35h-12V70ZM6 129h12v38H6v-38Zm104 0h12v38h-12v-38Z" opacity="0.78"/>
+  </g>
+</svg>
