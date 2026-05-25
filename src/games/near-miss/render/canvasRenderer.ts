@@ -59,8 +59,8 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 
 function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
   const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
-  const spriteScaleX = 1.95;
-  const spriteScaleY = 1.22;
+  const spriteScaleX = 2.28;
+  const spriteScaleY = 1.42;
   const spriteWidth = width * spriteScaleX;
   const spriteHeight = height * spriteScaleY;
 
@@ -84,8 +84,8 @@ function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, w
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const { x, y, width, height, visualYaw } = state.player;
-  const spriteScaleX = 2.25;
-  const spriteScaleY = 1.3;
+  const spriteScaleX = 2.08;
+  const spriteScaleY = 1.2;
   const spriteWidth = width * spriteScaleX;
   const spriteHeight = height * spriteScaleY;
 
