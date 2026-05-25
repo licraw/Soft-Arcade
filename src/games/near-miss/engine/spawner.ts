@@ -1,6 +1,7 @@
 import type { LaneSystem } from "@/games/shared/car/types";
 import { getLaneCenter } from "@/games/shared/car/laneSystem";
 import { NEAR_MISS_TUNING as TUNING } from "./tuning";
+import { DEFAULT_TRAFFIC_VEHICLE_ID, getSpawnableTrafficVehicleConfigs } from "./vehicleConfig";
 
 export type TrafficCar = {
   id: number;
@@ -12,6 +13,7 @@ export type TrafficCar = {
   y: number;
   width: number;
   height: number;
+  vehicleConfigId: string;
   forwardSpeed: number;
   paletteIndex: number;
   nearMissed: boolean;
@@ -131,6 +133,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   let id = nextId;
 
   packet.cars.forEach((packetCar, index) => {
+    const vehicleConfig = chooseTrafficVehicleConfig();
     const lane = lanes[index];
     const width = carWidth * (TUNING.trafficWidthRandomBase + Math.random() * TUNING.trafficWidthRandomRange);
     const height = carHeight * (TUNING.trafficHeightRandomBase + Math.random() * TUNING.trafficHeightRandomRange);
@@ -148,6 +151,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       y: -height + packetCar.yOffset * carHeight,
       width,
       height,
+      vehicleConfigId: vehicleConfig.id,
       forwardSpeed: Math.max(TUNING.minTrafficForwardSpeed, playerSpeed * packetCar.speedRatio * speedVariance),
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,
@@ -158,6 +162,33 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   });
 
   return packetCars;
+}
+
+function chooseTrafficVehicleConfig() {
+  const configs = getSpawnableTrafficVehicleConfigs();
+  const fallbackConfig = configs.find((config) => config.id === DEFAULT_TRAFFIC_VEHICLE_ID) || configs[0];
+
+  if (!fallbackConfig) {
+    throw new Error("Near Miss traffic spawner needs at least one curated spawnable vehicle.");
+  }
+
+  const totalWeight = configs.reduce((total, config) => total + config.spawnWeight, 0);
+
+  if (totalWeight <= 0) {
+    return fallbackConfig;
+  }
+
+  let roll = Math.random() * totalWeight;
+
+  for (const config of configs) {
+    roll -= config.spawnWeight;
+
+    if (roll <= 0) {
+      return config;
+    }
+  }
+
+  return fallbackConfig;
 }
 
 function choosePacket(elapsed: number) {

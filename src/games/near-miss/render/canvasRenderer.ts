@@ -1,5 +1,4 @@
 import { drawRoad } from "./road";
-import { drawArcadeCar, playerCarPalette, trafficCarPalettes } from "./sprites";
 import type { NearMissRuntimeState } from "../engine/gameLoop";
 import {
   getPlayerHitbox,
@@ -8,27 +7,16 @@ import {
   getTrafficNearMissShell,
   NEAR_MISS_TUNING as TUNING
 } from "../engine/tuning";
-import blueSedanAsset from "../ui/blue-sedan.svg";
-import goldSedanAsset from "../ui/gold-sedan.svg";
-import redCarAsset from "../ui/redcar.svg";
+import { getVehicleConfig, NEAR_MISS_VEHICLE_CONFIGS, PLAYER_VEHICLE_ID } from "../engine/vehicleConfig";
 
-const redCarImage = typeof window !== "undefined" ? new Image() : null;
-const redCarUrl = typeof redCarAsset === "string" ? redCarAsset : redCarAsset.src;
-const blueSedanImage = typeof window !== "undefined" ? new Image() : null;
-const blueSedanUrl = typeof blueSedanAsset === "string" ? blueSedanAsset : blueSedanAsset.src;
-const goldSedanImage = typeof window !== "undefined" ? new Image() : null;
-const goldSedanUrl = typeof goldSedanAsset === "string" ? goldSedanAsset : goldSedanAsset.src;
+const vehicleImages = new Map<string, HTMLImageElement>();
 
-if (redCarImage) {
-  redCarImage.src = redCarUrl;
-}
-
-if (blueSedanImage) {
-  blueSedanImage.src = blueSedanUrl;
-}
-
-if (goldSedanImage) {
-  goldSedanImage.src = goldSedanUrl;
+if (typeof window !== "undefined") {
+  for (const config of NEAR_MISS_VEHICLE_CONFIGS) {
+    const image = new Image();
+    image.src = config.spritePath;
+    vehicleImages.set(config.id, image);
+  }
 }
 
 export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
@@ -38,7 +26,7 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   for (const car of state.traffic) {
     ctx.save();
     ctx.globalAlpha = TUNING.trafficRenderAlpha;
-    drawTrafficSedan(ctx, car.x, car.y, car.width, car.height, car.paletteIndex);
+    drawTrafficVehicle(ctx, car.x, car.y, car.width, car.height, car.vehicleConfigId);
     ctx.restore();
   }
 
@@ -62,37 +50,29 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   }
 }
 
-function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
-  const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
-  const spriteScaleX = TUNING.trafficSpriteScaleX;
-  const spriteScaleY = TUNING.trafficSpriteScaleY;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+function drawTrafficVehicle(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, vehicleConfigId: string) {
+  const vehicleConfig = getVehicleConfig(vehicleConfigId);
+  const vehicleImage = vehicleImages.get(vehicleConfig.id);
+  const maxSpriteWidth = width * TUNING.trafficSpriteScaleX * vehicleConfig.uniformVisualScale;
+  const maxSpriteHeight = height * TUNING.trafficSpriteScaleY * vehicleConfig.uniformVisualScale;
 
-  ctx.shadowColor = paletteIndex % 2 === 0 ? "rgba(65, 171, 232, 0.22)" : "rgba(224, 172, 42, 0.18)";
+  ctx.shadowColor = vehicleConfig.vehicleClass === "van-truck" ? "rgba(60, 255, 143, 0.18)" : "rgba(65, 171, 232, 0.2)";
   ctx.shadowBlur = 12;
 
-  if (sedanImage?.complete && sedanImage.naturalWidth > 0) {
-    ctx.drawImage(sedanImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+  if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
+    drawImagePreservingAspectRatio(ctx, vehicleImage, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
     return;
   }
 
-  drawArcadeCar(ctx, {
-    x,
-    y,
-    width,
-    height,
-    palette: trafficCarPalettes[paletteIndex % trafficCarPalettes.length],
-    direction: "up"
-  });
+  drawMissingVehicleAsset(ctx, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
 }
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const { x, y, width, height, visualYaw } = state.player;
-  const spriteScaleX = TUNING.playerSpriteScaleX;
-  const spriteScaleY = TUNING.playerSpriteScaleY;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+  const vehicleConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
+  const vehicleImage = vehicleImages.get(vehicleConfig.id);
+  const maxSpriteWidth = width * TUNING.playerSpriteScaleX * vehicleConfig.uniformVisualScale;
+  const maxSpriteHeight = height * TUNING.playerSpriteScaleY * vehicleConfig.uniformVisualScale;
 
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
@@ -101,24 +81,48 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
   ctx.shadowColor = "rgba(255, 77, 90, 0.46)";
   ctx.shadowBlur = 22;
 
-  if (redCarImage?.complete && redCarImage.naturalWidth > 0) {
-    ctx.drawImage(redCarImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+  if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
+    drawImagePreservingAspectRatio(ctx, vehicleImage, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
   } else {
-    drawArcadeCar(ctx, {
-      x,
-      y,
-      width,
-      height,
-      palette: playerCarPalette,
-      direction: "up"
-    });
+    drawMissingVehicleAsset(ctx, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
   }
 
   ctx.restore();
 }
 
+function drawImagePreservingAspectRatio(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  centerX: number,
+  centerY: number,
+  maxWidth: number,
+  maxHeight: number
+) {
+  const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+
+  ctx.drawImage(image, centerX - drawWidth / 2, centerY - drawHeight / 2, drawWidth, drawHeight);
+}
+
+function drawMissingVehicleAsset(ctx: CanvasRenderingContext2D, centerX: number, centerY: number, maxWidth: number, maxHeight: number) {
+  const width = Math.min(maxWidth, 28);
+  const height = Math.min(maxHeight, 42);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 77, 90, 0.72)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(centerX - width / 2, centerY - height / 2, width, height);
+  ctx.beginPath();
+  ctx.moveTo(centerX - width / 2, centerY - height / 2);
+  ctx.lineTo(centerX + width / 2, centerY + height / 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const playerHitbox = getPlayerHitbox(state.player);
+  const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
 
   ctx.save();
   ctx.lineWidth = 1;
@@ -126,6 +130,13 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   strokeBounds(ctx, playerHitbox);
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
   strokeBounds(ctx, getPlayerNearMissShell(playerHitbox));
+  ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
+  ctx.font = "700 10px Arial, Helvetica, sans-serif";
+  ctx.fillText(
+    `${playerConfig.label} / ${playerConfig.vehicleClass} / visual yaw ${state.player.visualYaw.toFixed(1)}deg only`,
+    state.player.x,
+    Math.max(12, state.player.y - 4)
+  );
 
   for (const center of state.laneSystem.centers) {
     ctx.strokeStyle = "rgba(125, 211, 252, 0.26)";
@@ -145,6 +156,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   }
 
   for (const car of state.traffic) {
+    const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
     const trafficHitbox = getTrafficHitbox(car);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
     strokeBounds(ctx, trafficHitbox);
@@ -158,7 +170,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.stroke();
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
-    ctx.fillText(`${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
+    ctx.fillText(`${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / ${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
   }
   ctx.restore();
 }
