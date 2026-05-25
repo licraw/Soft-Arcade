@@ -149,8 +149,8 @@ export class NearMissGameLoop {
     this.canvas.style.height = `${displayHeight}px`;
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
-    const laneSystem = createLaneSystem(displayWidth, TUNING.laneCount);
-    const playerBody = getPlayerBodySize(laneSystem.laneWidth);
+    const laneSystem = createNearMissLaneSystem(displayWidth);
+    const playerBody = getPlayerBodySize(getVehicleSizingLaneWidth(laneSystem));
     const carWidth = playerBody.width;
     const carHeight = playerBody.height;
     const playerCenterRatio = this.state.width
@@ -209,8 +209,8 @@ export class NearMissGameLoop {
   private createInitialState(bestScore: number): NearMissRuntimeState {
     const width = this.canvas.clientWidth || 720;
     const height = this.canvas.clientHeight || 620;
-    const laneSystem = createLaneSystem(width, TUNING.laneCount);
-    const playerBody = getPlayerBodySize(laneSystem.laneWidth);
+    const laneSystem = createNearMissLaneSystem(width);
+    const playerBody = getPlayerBodySize(getVehicleSizingLaneWidth(laneSystem));
     const carWidth = playerBody.width;
     const carHeight = playerBody.height;
     const startLane = Math.floor(laneSystem.lanes / 2);
@@ -558,4 +558,24 @@ export class NearMissGameLoop {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function createNearMissLaneSystem(width: number): LaneSystem {
+  const laneSystem = createLaneSystem(width, TUNING.laneCount);
+  const roadWidth = laneSystem.roadWidth * TUNING.roadWidthScale;
+  const roadLeft = (width - roadWidth) / 2;
+  const laneWidth = roadWidth / laneSystem.lanes;
+  const centers = Array.from({ length: laneSystem.lanes }, (_, index) => roadLeft + laneWidth * (index + 0.5));
+
+  return {
+    ...laneSystem,
+    roadLeft,
+    roadWidth,
+    laneWidth,
+    centers
+  };
+}
+
+function getVehicleSizingLaneWidth(laneSystem: LaneSystem) {
+  return laneSystem.laneWidth / TUNING.roadWidthScale;
 }

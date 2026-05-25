@@ -33,7 +33,8 @@ to use gameplay bodies.
 Vehicle metadata lives in `vehicleConfig.ts`. Each entry defines:
 
 - `id`: stable runtime id stored on traffic cars as `vehicleConfigId`.
-- `vehicleClass`: broad category such as `sedan`, `suv`, or `van-truck`.
+- `vehicleClass`: broad category for curated active assets, such as `sedan` or
+  `van-truck`.
 - `spritePath`: public SVG path for vehicle assets under
   `public/games/near-miss/vehicles`.
 - `uniformVisualScale`: render-only multiplier applied after the shared traffic
@@ -42,30 +43,27 @@ Vehicle metadata lives in `vehicleConfig.ts`. Each entry defines:
 - `spawnWeight`: whether and how often a traffic vehicle can be selected. A
   weight of `0` means the vehicle is registered but not spawnable.
 
-Current traffic spawning still assigns `DEFAULT_TRAFFIC_VEHICLE_ID` in
-`spawner.ts`, so all live traffic uses the sedan config unless that logic is
-expanded to select from `getSpawnableTrafficVehicleConfigs()`.
+Traffic spawning selects from `getSpawnableTrafficVehicleConfigs()` in
+`spawner.ts` and stores the selected id on each traffic car as
+`vehicleConfigId`.
 
-Current traffic rendering in `canvasRenderer.ts` uses imported sedan SVGs
-(`blue-sedan.svg` and `gold-sedan.svg`) and chooses between them with
-`paletteIndex`. It still reads `uniformVisualScale` from `vehicleConfigId`, but
-it does not automatically load arbitrary `spritePath` values for non-sedan
-traffic yet.
+Traffic rendering in `canvasRenderer.ts` loads the configured public SVG
+`spritePath` into a browser `Image`, draws it centered on the gameplay body, and
+preserves aspect ratio with one uniform scale. Normal gameplay vehicles should
+not use procedurally drawn canvas fallback art.
 
-The player renderer separately imports `redcar.svg` and uses
-`PLAYER_VEHICLE_ID` only for render scaling and debug labeling.
+The player renderer uses `PLAYER_VEHICLE_ID` to resolve the curated public copy
+of `src/games/near-miss/ui/redcar.svg`.
 
 To add a new vehicle class end to end:
 
-1. Add a normalized SVG to `public/games/near-miss/vehicles`.
-2. Add a `NEAR_MISS_VEHICLE_CONFIGS` entry with a unique `id`, `vehicleClass`,
+1. Add the curated source SVG to `src/games/near-miss/ui`.
+2. Copy or clean it into `public/games/near-miss/vehicles` without adding
+   checkerboards, watermarks, hidden backgrounds, or generated placeholder art.
+3. Add a `NEAR_MISS_VEHICLE_CONFIGS` entry with a unique `id`, `vehicleClass`,
    `spritePath`, and render-only `uniformVisualScale`.
-3. Keep `spawnWeight: 0` until the renderer can draw that vehicle class.
-4. Update `canvasRenderer.ts` to load and draw the class-specific SVG through
-   the same center-anchor, uniform-scaling strategy.
-5. Update `spawner.ts` to choose from `getSpawnableTrafficVehicleConfigs()` and
-   assign the selected config id to `vehicleConfigId`.
-6. Only then raise `spawnWeight` above `0`.
+4. Keep `spawnWeight: 0` until the asset is verified in-game.
+5. Only then raise `spawnWeight` above `0`.
 
 Do not use visual scale to tune collisions. If collision behavior needs a new
 pass, change the gameplay body or hitbox helpers deliberately and verify with

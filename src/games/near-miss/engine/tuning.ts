@@ -6,12 +6,13 @@ import { expandBounds, insetBounds } from "./collision";
 export const NEAR_MISS_TUNING = {
   // Road/lane geometry. The road width formula itself lives in shared laneSystem.
   laneCount: 4,
-  debug: false,
+  roadWidthScale: 0.95,
+  debug: true,
 
   // Internal speed units. HUD mph is a simple display transform, not simulation.
   minSpeed: 190,
   cruiseSpeed: 285,
-  maxSpeed: 680,
+  maxSpeed: 880,
   baselineSpeedReserve: 80,
   speedRampPerSecond: 6.8,
   throttleAcceleration: 185,
@@ -44,11 +45,11 @@ export const NEAR_MISS_TUNING = {
 
   // Collision and near-miss shells are derived from gameplay bodies.
   playerHitboxWidth: 0.82,
-  playerHitboxHeight: 0.88,
+  playerHitboxHeight: 0.92,
   trafficHitboxWidth: 0.85,
-  trafficHitboxHeight: 0.87,
+  trafficHitboxHeight: 0.92,
   nearMissGrowX: 18,
-  nearMissGrowY: 10,
+  nearMissGrowY: 11,
   trafficNearMissGrowXScale: 0.7,
   minNearMissRelativeSpeed: 62,
   minRelativeTrafficSpeed: 28,
@@ -162,6 +163,8 @@ export function getDisplayedDistanceMiles(distance: number) {
 }
 
 export function getPlayerHitbox(bounds: CarBounds) {
+  // Collision boxes are stable, axis-aligned gameplay bounds. Visual yaw is
+  // cosmetic in the renderer and must not affect collision math.
   return insetBounds(bounds, NEAR_MISS_TUNING.playerHitboxWidth, NEAR_MISS_TUNING.playerHitboxHeight);
 }
 
