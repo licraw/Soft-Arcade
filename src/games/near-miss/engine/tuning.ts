@@ -8,7 +8,7 @@ export const NEAR_MISS_TUNING = {
   // Road/lane geometry. The road width formula itself lives in shared laneSystem.
   laneCount: 4,
   roadWidthScale: 0.95,
-  debug: true,
+  debug: false,
 
   // Internal speed units. HUD mph is a simple display transform, not simulation.
   minSpeed: 190,
@@ -96,23 +96,6 @@ export const NEAR_MISS_TUNING = {
   // Road motion and render-only speed effects.
   stripeSpeedScale: 0.52,
   stripeRepeatDistance: 54,
-  speedLineStartSpeed: 360,
-  speedLineSpeedRange: 260,
-  speedLineBaseAlpha: 0.1,
-  speedLineAlphaRange: 0.2,
-  speedLineBaseWidth: 1,
-  speedLineWidthRange: 2,
-  speedLineCount: 12,
-  speedLineSpacing: 89,
-  speedLineStripeOffsetScale: 4,
-  speedLineModuloPadding: 120,
-  speedLineYOffset: 80,
-  speedLineBaseLength: 56,
-  speedLineLengthRange: 52,
-  speedLineSideOffset: 18,
-  speedLineSideStep: 14,
-  speedLineSideDrift: 10,
-  speedLineShoulderGlowWidth: 8,
 
   // Sprite overdraw. These define rendered SVG bounds; collision is inset from
   // those bounds while remaining axis-aligned and yaw-independent.
