@@ -28,6 +28,49 @@ Renderer sprite scales in `tuning.ts` intentionally overdraw the gameplay body.
 Those scales change visuals only. Collision and near-miss math should continue
 to use gameplay bodies.
 
+## Vehicles And Sprite Rendering
+
+Vehicle metadata lives in `vehicleConfig.ts`. Each entry defines:
+
+- `id`: stable runtime id stored on traffic cars as `vehicleConfigId`.
+- `vehicleClass`: broad category such as `sedan`, `suv`, or `van-truck`.
+- `spritePath`: public SVG path for vehicle assets under
+  `public/games/near-miss/vehicles`.
+- `uniformVisualScale`: render-only multiplier applied after the shared traffic
+  sprite scale. Use this for visual size differences without changing gameplay
+  bodies.
+- `spawnWeight`: whether and how often a traffic vehicle can be selected. A
+  weight of `0` means the vehicle is registered but not spawnable.
+
+Current traffic spawning still assigns `DEFAULT_TRAFFIC_VEHICLE_ID` in
+`spawner.ts`, so all live traffic uses the sedan config unless that logic is
+expanded to select from `getSpawnableTrafficVehicleConfigs()`.
+
+Current traffic rendering in `canvasRenderer.ts` uses imported sedan SVGs
+(`blue-sedan.svg` and `gold-sedan.svg`) and chooses between them with
+`paletteIndex`. It still reads `uniformVisualScale` from `vehicleConfigId`, but
+it does not automatically load arbitrary `spritePath` values for non-sedan
+traffic yet.
+
+The player renderer separately imports `redcar.svg` and uses
+`PLAYER_VEHICLE_ID` only for render scaling and debug labeling.
+
+To add a new vehicle class end to end:
+
+1. Add a normalized SVG to `public/games/near-miss/vehicles`.
+2. Add a `NEAR_MISS_VEHICLE_CONFIGS` entry with a unique `id`, `vehicleClass`,
+   `spritePath`, and render-only `uniformVisualScale`.
+3. Keep `spawnWeight: 0` until the renderer can draw that vehicle class.
+4. Update `canvasRenderer.ts` to load and draw the class-specific SVG through
+   the same center-anchor, uniform-scaling strategy.
+5. Update `spawner.ts` to choose from `getSpawnableTrafficVehicleConfigs()` and
+   assign the selected config id to `vehicleConfigId`.
+6. Only then raise `spawnWeight` above `0`.
+
+Do not use visual scale to tune collisions. If collision behavior needs a new
+pass, change the gameplay body or hitbox helpers deliberately and verify with
+debug overlays.
+
 ## Collision And Near Misses
 
 Hitboxes are derived from gameplay bodies through:
