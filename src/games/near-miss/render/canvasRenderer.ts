@@ -23,7 +23,6 @@ if (typeof window !== "undefined") {
 
 export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   drawRoad(ctx, state.laneSystem, state.width, state.height, state.stripeOffset);
-  drawSpeedLines(ctx, state);
 
   for (const car of state.traffic) {
     ctx.save();
@@ -176,39 +175,4 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
 
 function strokeBounds(ctx: CanvasRenderingContext2D, bounds: { x: number; y: number; width: number; height: number }) {
   ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
-}
-
-function drawSpeedLines(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const intensity = Math.max(0, Math.min(1, (state.speed - TUNING.speedLineStartSpeed) / TUNING.speedLineSpeedRange));
-
-  if (intensity <= 0) {
-    return;
-  }
-
-  ctx.save();
-  ctx.globalAlpha = TUNING.speedLineBaseAlpha + intensity * TUNING.speedLineAlphaRange;
-  ctx.strokeStyle = "#00e5ff";
-  ctx.lineWidth = TUNING.speedLineBaseWidth + intensity * TUNING.speedLineWidthRange;
-
-  for (let index = 0; index < TUNING.speedLineCount; index += 1) {
-    const side = index % 2 === 0 ? -1 : 1;
-    const sideOffset = TUNING.speedLineSideOffset + (index % 3) * TUNING.speedLineSideStep;
-    const x =
-      side < 0
-        ? state.laneSystem.roadLeft - sideOffset
-        : state.laneSystem.roadLeft + state.laneSystem.roadWidth + sideOffset;
-    const y =
-      (index * TUNING.speedLineSpacing + Math.abs(state.stripeOffset) * TUNING.speedLineStripeOffsetScale) %
-        (state.height + TUNING.speedLineModuloPadding) -
-      TUNING.speedLineYOffset;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + side * TUNING.speedLineSideDrift, y + TUNING.speedLineBaseLength + intensity * TUNING.speedLineLengthRange);
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = "rgba(0, 229, 255, 0.06)";
-  ctx.fillRect(state.laneSystem.roadLeft - TUNING.speedLineShoulderGlowWidth, 0, TUNING.speedLineShoulderGlowWidth, state.height);
-  ctx.fillRect(state.laneSystem.roadLeft + state.laneSystem.roadWidth, 0, TUNING.speedLineShoulderGlowWidth, state.height);
-  ctx.restore();
 }
