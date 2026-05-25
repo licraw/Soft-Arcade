@@ -1,5 +1,6 @@
 import type { CarBounds } from "@/games/shared/car/types";
 import { expandBounds, insetBounds } from "./collision";
+import { getVehicleConfig, PLAYER_VEHICLE_ID, type NearMissVehicleConfig } from "./vehicleConfig";
 
 // Near Miss tuning is intentionally centralized here. Prefer moving literals into
 // this file before changing formulas in the game loop, spawner, or renderer.
@@ -37,20 +38,13 @@ export const NEAR_MISS_TUNING = {
   roadEdgePadding: 8,
   playerBottomMargin: 34,
 
-  // Authoritative gameplay body sizing. Renderer sprites may visually overhang.
+  // Gameplay occupancy body sizing. Rendered sprite bounds are derived from
+  // these bodies, and collision is then inset from the rendered bounds.
   carWidthRatio: 0.48,
   carHeightRatio: 1.34,
-  trafficResizeWidthScale: 0.98,
-  trafficResizeHeightScale: 1.02,
 
-  // Collision and near-miss shells are derived from gameplay bodies.
-  playerHitboxWidth: 0.82,
-  playerHitboxHeight: 0.92,
-  trafficHitboxWidth: 0.85,
-  trafficHitboxHeight: 0.92,
-  nearMissGrowX: 18,
-  nearMissGrowY: 11,
-  trafficNearMissGrowXScale: 0.7,
+  // Collision boxes are inset from rendered sprite bounds for arcade forgiveness.
+  // Near-miss shells expand from collision boxes and never cause crashes.
   minNearMissRelativeSpeed: 62,
   minRelativeTrafficSpeed: 28,
 
@@ -120,7 +114,8 @@ export const NEAR_MISS_TUNING = {
   speedLineSideDrift: 10,
   speedLineShoulderGlowWidth: 8,
 
-  // Sprite overdraw. These are visual scales only; gameplay bodies stay unchanged.
+  // Sprite overdraw. These define rendered SVG bounds; collision is inset from
+  // those bounds while remaining axis-aligned and yaw-independent.
   trafficSpriteScaleX: 2.28,
   trafficSpriteScaleY: 1.42,
   playerSpriteScaleX: 2.08,
@@ -137,10 +132,49 @@ export function getPlayerBodySize(laneWidth: number) {
   };
 }
 
-export function getTrafficResizeBodySize(playerBody: Pick<CarBounds, "width" | "height">) {
+export function getTrafficBodySize(
+  laneWidth: number,
+  playerBody: Pick<CarBounds, "height">,
+  vehicleConfig: Pick<NearMissVehicleConfig, "occupancyWidthLanes" | "occupancyLengthScale">,
+  widthVariance = 1,
+  heightVariance = 1
+) {
   return {
-    width: playerBody.width * NEAR_MISS_TUNING.trafficResizeWidthScale,
-    height: playerBody.height * NEAR_MISS_TUNING.trafficResizeHeightScale
+    width: laneWidth * vehicleConfig.occupancyWidthLanes * widthVariance,
+    height: playerBody.height * vehicleConfig.occupancyLengthScale * heightVariance
+  };
+}
+
+export function getPlayerSpriteBounds(bounds: CarBounds) {
+  return getRenderedSpriteBounds(
+    bounds,
+    getVehicleConfig(PLAYER_VEHICLE_ID),
+    NEAR_MISS_TUNING.playerSpriteScaleX,
+    NEAR_MISS_TUNING.playerSpriteScaleY
+  );
+}
+
+export function getTrafficSpriteBounds(bounds: CarBounds, vehicleConfig: NearMissVehicleConfig) {
+  return getRenderedSpriteBounds(bounds, vehicleConfig, NEAR_MISS_TUNING.trafficSpriteScaleX, NEAR_MISS_TUNING.trafficSpriteScaleY);
+}
+
+export function getRenderedSpriteBounds(
+  bounds: CarBounds,
+  vehicleConfig: Pick<NearMissVehicleConfig, "spriteAspectRatio" | "uniformVisualScale">,
+  spriteScaleX: number,
+  spriteScaleY: number
+): CarBounds {
+  const maxWidth = bounds.width * spriteScaleX * vehicleConfig.uniformVisualScale;
+  const maxHeight = bounds.height * spriteScaleY * vehicleConfig.uniformVisualScale;
+  const widthFromHeight = maxHeight * vehicleConfig.spriteAspectRatio;
+  const width = Math.min(maxWidth, widthFromHeight);
+  const height = width / vehicleConfig.spriteAspectRatio;
+
+  return {
+    x: bounds.x + bounds.width / 2 - width / 2,
+    y: bounds.y + bounds.height / 2 - height / 2,
+    width,
+    height
   };
 }
 
@@ -163,23 +197,29 @@ export function getDisplayedDistanceMiles(distance: number) {
 }
 
 export function getPlayerHitbox(bounds: CarBounds) {
-  // Collision boxes are stable, axis-aligned gameplay bounds. Visual yaw is
+  const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
+
+  // Collision is based on the unrotated rendered SVG bounds. Visual yaw is
   // cosmetic in the renderer and must not affect collision math.
-  return insetBounds(bounds, NEAR_MISS_TUNING.playerHitboxWidth, NEAR_MISS_TUNING.playerHitboxHeight);
+  return getVehicleCollisionBox(getPlayerSpriteBounds(bounds), playerConfig);
 }
 
-export function getTrafficHitbox(bounds: CarBounds) {
-  return insetBounds(bounds, NEAR_MISS_TUNING.trafficHitboxWidth, NEAR_MISS_TUNING.trafficHitboxHeight);
+export function getTrafficHitbox(bounds: CarBounds, vehicleConfig: NearMissVehicleConfig) {
+  return getVehicleCollisionBox(getTrafficSpriteBounds(bounds, vehicleConfig), vehicleConfig);
+}
+
+export function getVehicleCollisionBox(spriteBounds: CarBounds, vehicleConfig: NearMissVehicleConfig) {
+  return insetBounds(spriteBounds, vehicleConfig.collisionWidthRatio, vehicleConfig.collisionHeightRatio);
 }
 
 export function getPlayerNearMissShell(playerHitbox: CarBounds) {
-  return expandBounds(playerHitbox, NEAR_MISS_TUNING.nearMissGrowX, NEAR_MISS_TUNING.nearMissGrowY);
+  return getVehicleNearMissShell(playerHitbox, getVehicleConfig(PLAYER_VEHICLE_ID));
 }
 
-export function getTrafficNearMissShell(trafficHitbox: CarBounds) {
-  return expandBounds(
-    trafficHitbox,
-    NEAR_MISS_TUNING.nearMissGrowX * NEAR_MISS_TUNING.trafficNearMissGrowXScale,
-    NEAR_MISS_TUNING.nearMissGrowY
-  );
+export function getTrafficNearMissShell(trafficHitbox: CarBounds, vehicleConfig: NearMissVehicleConfig) {
+  return getVehicleNearMissShell(trafficHitbox, vehicleConfig);
+}
+
+export function getVehicleNearMissShell(hitbox: CarBounds, vehicleConfig: NearMissVehicleConfig) {
+  return expandBounds(hitbox, vehicleConfig.nearMissGrowX, vehicleConfig.nearMissGrowY);
 }

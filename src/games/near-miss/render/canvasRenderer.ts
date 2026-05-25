@@ -3,8 +3,10 @@ import type { NearMissRuntimeState } from "../engine/gameLoop";
 import {
   getPlayerHitbox,
   getPlayerNearMissShell,
+  getPlayerSpriteBounds,
   getTrafficHitbox,
   getTrafficNearMissShell,
+  getTrafficSpriteBounds,
   NEAR_MISS_TUNING as TUNING
 } from "../engine/tuning";
 import { getVehicleConfig, NEAR_MISS_VEHICLE_CONFIGS, PLAYER_VEHICLE_ID } from "../engine/vehicleConfig";
@@ -53,26 +55,24 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 function drawTrafficVehicle(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, vehicleConfigId: string) {
   const vehicleConfig = getVehicleConfig(vehicleConfigId);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const maxSpriteWidth = width * TUNING.trafficSpriteScaleX * vehicleConfig.uniformVisualScale;
-  const maxSpriteHeight = height * TUNING.trafficSpriteScaleY * vehicleConfig.uniformVisualScale;
+  const spriteBounds = getTrafficSpriteBounds({ x, y, width, height }, vehicleConfig);
 
   ctx.shadowColor = vehicleConfig.vehicleClass === "van-truck" ? "rgba(60, 255, 143, 0.18)" : "rgba(65, 171, 232, 0.2)";
   ctx.shadowBlur = 12;
 
   if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
-    drawImagePreservingAspectRatio(ctx, vehicleImage, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
+    drawImageInBounds(ctx, vehicleImage, spriteBounds);
     return;
   }
 
-  drawMissingVehicleAsset(ctx, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
+  drawMissingVehicleAsset(ctx, spriteBounds);
 }
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const { x, y, width, height, visualYaw } = state.player;
   const vehicleConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const maxSpriteWidth = width * TUNING.playerSpriteScaleX * vehicleConfig.uniformVisualScale;
-  const maxSpriteHeight = height * TUNING.playerSpriteScaleY * vehicleConfig.uniformVisualScale;
+  const spriteBounds = getPlayerSpriteBounds(state.player);
 
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
@@ -82,32 +82,23 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
   ctx.shadowBlur = 22;
 
   if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
-    drawImagePreservingAspectRatio(ctx, vehicleImage, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
+    drawImageInBounds(ctx, vehicleImage, spriteBounds);
   } else {
-    drawMissingVehicleAsset(ctx, x + width / 2, y + height / 2, maxSpriteWidth, maxSpriteHeight);
+    drawMissingVehicleAsset(ctx, spriteBounds);
   }
 
   ctx.restore();
 }
 
-function drawImagePreservingAspectRatio(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  centerX: number,
-  centerY: number,
-  maxWidth: number,
-  maxHeight: number
-) {
-  const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-
-  ctx.drawImage(image, centerX - drawWidth / 2, centerY - drawHeight / 2, drawWidth, drawHeight);
+function drawImageInBounds(ctx: CanvasRenderingContext2D, image: HTMLImageElement, bounds: { x: number; y: number; width: number; height: number }) {
+  ctx.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height);
 }
 
-function drawMissingVehicleAsset(ctx: CanvasRenderingContext2D, centerX: number, centerY: number, maxWidth: number, maxHeight: number) {
-  const width = Math.min(maxWidth, 28);
-  const height = Math.min(maxHeight, 42);
+function drawMissingVehicleAsset(ctx: CanvasRenderingContext2D, bounds: { x: number; y: number; width: number; height: number }) {
+  const width = Math.min(bounds.width, 28);
+  const height = Math.min(bounds.height, 42);
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
 
   ctx.save();
   ctx.strokeStyle = "rgba(255, 77, 90, 0.72)";
@@ -126,6 +117,10 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
 
   ctx.save();
   ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(125, 211, 252, 0.58)";
+  strokeBounds(ctx, state.player);
+  ctx.strokeStyle = "rgba(216, 180, 254, 0.55)";
+  strokeBounds(ctx, getPlayerSpriteBounds(state.player));
   ctx.strokeStyle = "rgba(60, 255, 143, 0.85)";
   strokeBounds(ctx, playerHitbox);
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
@@ -157,11 +152,15 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
 
   for (const car of state.traffic) {
     const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
-    const trafficHitbox = getTrafficHitbox(car);
+    const trafficHitbox = getTrafficHitbox(car, vehicleConfig);
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.5)";
+    strokeBounds(ctx, car);
+    ctx.strokeStyle = "rgba(216, 180, 254, 0.5)";
+    strokeBounds(ctx, getTrafficSpriteBounds(car, vehicleConfig));
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
     strokeBounds(ctx, trafficHitbox);
     ctx.strokeStyle = "rgba(250, 204, 21, 0.32)";
-    strokeBounds(ctx, getTrafficNearMissShell(trafficHitbox));
+    strokeBounds(ctx, getTrafficNearMissShell(trafficHitbox, vehicleConfig));
     ctx.strokeStyle = "rgba(60, 255, 143, 0.45)";
     const corridorX = state.laneSystem.centers[car.corridorLane];
     ctx.beginPath();

@@ -1,6 +1,6 @@
 import { createLaneSystem, getLaneCenter } from "@/games/shared/car/laneSystem";
 import type { CarBounds, LaneSystem } from "@/games/shared/car/types";
-import { expandBounds, hasPlayerPassedTraffic, intersects, isNearMissShellOverlap } from "./collision";
+import { hasPlayerPassedTraffic, intersects, isNearMissShellOverlap } from "./collision";
 import type { NearMissInputState } from "./input";
 import { NEAR_MISS_MODE_CONFIG, type NearMissMode } from "./modes";
 import { chooseRunEndMessage } from "./runEndMessages";
@@ -12,11 +12,12 @@ import {
   getPlayerBodySize,
   getPlayerHitbox,
   getPlayerNearMissShell,
+  getTrafficBodySize,
   getTrafficHitbox,
   getTrafficNearMissShell,
-  getTrafficResizeBodySize,
   NEAR_MISS_TUNING as TUNING
 } from "./tuning";
+import { getVehicleConfig } from "./vehicleConfig";
 import { renderNearMiss } from "../render/canvasRenderer";
 
 type GameStatus = "ready" | "running" | "gameOver";
@@ -174,7 +175,8 @@ export class NearMissGameLoop {
     };
 
     for (const car of this.state.traffic) {
-      const trafficBody = getTrafficResizeBodySize(playerBody);
+      const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
+      const trafficBody = getTrafficBodySize(laneSystem.laneWidth, playerBody, vehicleConfig);
       car.width = trafficBody.width;
       car.height = trafficBody.height;
       car.x = getLaneCenter(laneSystem, Math.min(car.lane, laneSystem.lanes - 1)) + car.laneCenterOffset * laneSystem.laneWidth - car.width / 2;
@@ -279,7 +281,6 @@ export class NearMissGameLoop {
 
   private update(delta: number) {
     const state = this.state;
-    const carWidth = state.player.width;
     const carHeight = state.player.height;
     const baselineSpeed = getBaselineSpeed(state.elapsed);
 
@@ -310,7 +311,6 @@ export class NearMissGameLoop {
       const spawned = spawnTrafficPacket({
         laneSystem: state.laneSystem,
         traffic: state.traffic,
-        carWidth,
         carHeight,
         nextId: this.nextTrafficId,
         elapsed: state.elapsed,
@@ -399,10 +399,11 @@ export class NearMissGameLoop {
   }
 
   private canAwardNearMiss(car: TrafficCar, relativeYSpeed: number) {
+    const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
     const playerHitbox = this.getPlayerHitbox();
     const trafficHitbox = this.getTrafficHitbox(car);
     const playerShell = getPlayerNearMissShell(playerHitbox);
-    const trafficShell = getTrafficNearMissShell(trafficHitbox);
+    const trafficShell = getTrafficNearMissShell(trafficHitbox, vehicleConfig);
 
     return relativeYSpeed >= TUNING.minNearMissRelativeSpeed && isNearMissShellOverlap(playerShell, trafficShell, playerHitbox, trafficHitbox);
   }
@@ -514,11 +515,7 @@ export class NearMissGameLoop {
   }
 
   getTrafficHitbox(car: TrafficCar) {
-    return getTrafficHitbox(car);
-  }
-
-  getNearMissShell(bounds: CarBounds) {
-    return expandBounds(bounds, TUNING.nearMissGrowX, TUNING.nearMissGrowY);
+    return getTrafficHitbox(car, getVehicleConfig(car.vehicleConfigId));
   }
 
   private clampPlayerToRoad() {

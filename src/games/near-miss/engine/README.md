@@ -20,13 +20,13 @@ vehicle simulation.
 Gameplay body size is based on lane width:
 
 - Player body: `getPlayerBodySize(laneWidth)`.
-- Existing traffic resize behavior: `getTrafficResizeBodySize(playerBody)`.
-- Newly spawned traffic still applies its existing random width/height variance
-  in `spawner.ts`.
+- Traffic body: `getTrafficBodySize(laneWidth, playerBody, vehicleConfig)`.
+- Newly spawned traffic applies its existing random width/height variance after
+  vehicle-class occupancy sizing in `spawner.ts`.
 
-Renderer sprite scales in `tuning.ts` intentionally overdraw the gameplay body.
-Those scales change visuals only. Collision and near-miss math should continue
-to use gameplay bodies.
+Rendered sprite bounds are calculated from the gameplay body, vehicle visual
+scale, and `spriteAspectRatio`. Collision uses those unrotated rendered bounds
+as its source of truth, then insets them for arcade forgiveness.
 
 ## Vehicles And Sprite Rendering
 
@@ -37,9 +37,16 @@ Vehicle metadata lives in `vehicleConfig.ts`. Each entry defines:
   `van-truck`.
 - `spritePath`: public SVG path for vehicle assets under
   `public/games/near-miss/vehicles`.
+- `spriteAspectRatio`: intrinsic SVG aspect ratio used by both rendering and
+  collision sprite-bound math.
 - `uniformVisualScale`: render-only multiplier applied after the shared traffic
-  sprite scale. Use this for visual size differences without changing gameplay
-  bodies.
+  sprite scale.
+- `occupancyWidthLanes`: gameplay body width measured in current lane widths.
+- `occupancyLengthScale`: gameplay body length relative to the player body.
+- `collisionWidthRatio` and `collisionHeightRatio`: class-specific insets from
+  rendered sprite bounds.
+- `nearMissGrowX` and `nearMissGrowY`: class-specific expansion from collision
+  boxes for reward/danger feedback only.
 - `spawnWeight`: whether and how often a traffic vehicle can be selected. A
   weight of `0` means the vehicle is registered but not spawnable.
 
@@ -65,13 +72,17 @@ To add a new vehicle class end to end:
 4. Keep `spawnWeight: 0` until the asset is verified in-game.
 5. Only then raise `spawnWeight` above `0`.
 
-Do not use visual scale to tune collisions. If collision behavior needs a new
-pass, change the gameplay body or hitbox helpers deliberately and verify with
-debug overlays.
+Visual yaw is cosmetic only. Collision boxes stay axis-aligned and use unrotated
+rendered sprite bounds.
 
 ## Collision And Near Misses
 
-Hitboxes are derived from gameplay bodies through:
+Rendered sprite bounds are derived through:
+
+- `getPlayerSpriteBounds`
+- `getTrafficSpriteBounds`
+
+Hitboxes are inset from those rendered sprite bounds through:
 
 - `getPlayerHitbox`
 - `getTrafficHitbox`
@@ -81,8 +92,8 @@ Near-miss shells are derived from those hitboxes through:
 - `getPlayerNearMissShell`
 - `getTrafficNearMissShell`
 
-The current traffic near-miss shell is narrower on X than the player shell via
-`trafficNearMissGrowXScale`. This preserves the current collision feel.
+Near-miss shells never cause crashes; they are checked only after confirming the
+collision boxes do not intersect.
 
 ## Speed, Braking, And Displayed MPH
 

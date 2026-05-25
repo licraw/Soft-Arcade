@@ -5,7 +5,14 @@ export type NearMissVehicleConfig = {
   label: string;
   vehicleClass: NearMissVehicleClass;
   spritePath: string;
+  spriteAspectRatio: number;
   uniformVisualScale: number;
+  occupancyWidthLanes: number;
+  occupancyLengthScale: number;
+  collisionWidthRatio: number;
+  collisionHeightRatio: number;
+  nearMissGrowX: number;
+  nearMissGrowY: number;
   spawnWeight: number;
 };
 
@@ -18,7 +25,14 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     label: "Sports Coupe",
     vehicleClass: "sports-coupe",
     spritePath: "/games/near-miss/vehicles/player-sports-car.svg",
+    spriteAspectRatio: 128 / 192,
     uniformVisualScale: 1,
+    occupancyWidthLanes: 0.48,
+    occupancyLengthScale: 1,
+    collisionWidthRatio: 0.78,
+    collisionHeightRatio: 0.86,
+    nearMissGrowX: 18,
+    nearMissGrowY: 11,
     spawnWeight: 0
   },
   {
@@ -26,7 +40,14 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     label: "Blue Sedan",
     vehicleClass: "sedan",
     spritePath: "/games/near-miss/vehicles/traffic-sedan-blue.svg",
+    spriteAspectRatio: 128 / 192,
     uniformVisualScale: 0.9,
+    occupancyWidthLanes: 0.46,
+    occupancyLengthScale: 1,
+    collisionWidthRatio: 0.84,
+    collisionHeightRatio: 0.9,
+    nearMissGrowX: 13,
+    nearMissGrowY: 11,
     spawnWeight: 50
   },
   {
@@ -34,7 +55,14 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     label: "Gold Sedan",
     vehicleClass: "sedan",
     spritePath: "/games/near-miss/vehicles/traffic-sedan-gold.svg",
+    spriteAspectRatio: 128 / 192,
     uniformVisualScale: 0.9,
+    occupancyWidthLanes: 0.46,
+    occupancyLengthScale: 1,
+    collisionWidthRatio: 0.84,
+    collisionHeightRatio: 0.9,
+    nearMissGrowX: 13,
+    nearMissGrowY: 11,
     spawnWeight: 50
   },
   {
@@ -42,7 +70,14 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     label: "Van Truck",
     vehicleClass: "van-truck",
     spritePath: "/games/near-miss/vehicles/traffic-van-truck.svg",
+    spriteAspectRatio: 128 / 192,
     uniformVisualScale: 1.22,
+    occupancyWidthLanes: 0.9,
+    occupancyLengthScale: 1.28,
+    collisionWidthRatio: 0.88,
+    collisionHeightRatio: 0.94,
+    nearMissGrowX: 16,
+    nearMissGrowY: 13,
     spawnWeight: 12
   }
 ] as const satisfies readonly NearMissVehicleConfig[];
