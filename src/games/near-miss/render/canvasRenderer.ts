@@ -2,7 +2,7 @@ import { drawRoad } from "./road";
 import { drawArcadeCar, playerCarPalette, trafficCarPalettes } from "./sprites";
 import { expandBounds, insetBounds } from "../engine/collision";
 import type { NearMissRuntimeState } from "../engine/gameLoop";
-import { NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
+import { getCollisionScales, getNearMissShellGrowth, NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
 import blueSedanAsset from "../ui/blue-sedan.svg";
 import goldSedanAsset from "../ui/gold-sedan.svg";
 import redCarAsset from "../ui/redcar.svg";
@@ -59,16 +59,16 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 
 function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
   const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
-  const spriteScaleX = 1.95;
-  const spriteScaleY = 1.22;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+  const spriteBleedX = width * 0.18;
+  const spriteBleedY = height * 0.08;
+  const spriteWidth = width + spriteBleedX * 2;
+  const spriteHeight = height + spriteBleedY * 2;
 
   ctx.shadowColor = paletteIndex % 2 === 0 ? "rgba(65, 171, 232, 0.22)" : "rgba(224, 172, 42, 0.18)";
   ctx.shadowBlur = 12;
 
   if (sedanImage?.complete && sedanImage.naturalWidth > 0) {
-    ctx.drawImage(sedanImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+    ctx.drawImage(sedanImage, x - spriteBleedX, y - spriteBleedY, spriteWidth, spriteHeight);
     return;
   }
 
@@ -84,10 +84,10 @@ function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, w
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const { x, y, width, height, visualYaw } = state.player;
-  const spriteScaleX = 2.25;
-  const spriteScaleY = 1.3;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+  const spriteBleedX = width * 0.14;
+  const spriteBleedY = height * 0.06;
+  const spriteWidth = width + spriteBleedX * 2;
+  const spriteHeight = height + spriteBleedY * 2;
 
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
@@ -97,7 +97,7 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
   ctx.shadowBlur = 22;
 
   if (redCarImage?.complete && redCarImage.naturalWidth > 0) {
-    ctx.drawImage(redCarImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+    ctx.drawImage(redCarImage, x - spriteBleedX, y - spriteBleedY, spriteWidth, spriteHeight);
   } else {
     drawArcadeCar(ctx, {
       x,
@@ -113,14 +113,21 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
 }
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const playerHitbox = insetBounds(state.player, TUNING.playerHitboxWidth, TUNING.playerHitboxHeight);
+  const playerScales = getCollisionScales("player");
+  const playerHitbox = insetBounds(state.player, playerScales.width, playerScales.height);
+  const playerGrowth = getNearMissShellGrowth(state.laneSystem.laneWidth, state.player.height);
 
   ctx.save();
   ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(244, 242, 238, 0.45)";
+  strokeBounds(ctx, state.player);
   ctx.strokeStyle = "rgba(60, 255, 143, 0.85)";
   strokeBounds(ctx, playerHitbox);
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
-  strokeBounds(ctx, expandBounds(playerHitbox, TUNING.nearMissGrowX, TUNING.nearMissGrowY));
+  strokeBounds(ctx, expandBounds(playerHitbox, playerGrowth.x, playerGrowth.y));
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.strokeRect(state.laneSystem.roadLeft, 0, state.laneSystem.roadWidth, state.height);
 
   for (const center of state.laneSystem.centers) {
     ctx.strokeStyle = "rgba(125, 211, 252, 0.26)";
@@ -140,11 +147,15 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   }
 
   for (const car of state.traffic) {
-    const trafficHitbox = insetBounds(car, TUNING.trafficHitboxWidth, TUNING.trafficHitboxHeight);
+    const trafficScales = getCollisionScales("traffic");
+    const trafficGrowth = getNearMissShellGrowth(state.laneSystem.laneWidth, car.height);
+    const trafficHitbox = insetBounds(car, trafficScales.width, trafficScales.height);
+    ctx.strokeStyle = "rgba(244, 242, 238, 0.38)";
+    strokeBounds(ctx, car);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
     strokeBounds(ctx, trafficHitbox);
     ctx.strokeStyle = "rgba(250, 204, 21, 0.32)";
-    strokeBounds(ctx, expandBounds(trafficHitbox, TUNING.nearMissGrowX * 0.7, TUNING.nearMissGrowY));
+    strokeBounds(ctx, expandBounds(trafficHitbox, trafficGrowth.x, trafficGrowth.y));
     ctx.strokeStyle = "rgba(60, 255, 143, 0.45)";
     const corridorX = state.laneSystem.centers[car.corridorLane];
     ctx.beginPath();
@@ -153,7 +164,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.stroke();
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
-    ctx.fillText(`${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
+    ctx.fillText(`${car.packetId} ${car.solveMode || "?"} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
   }
   ctx.restore();
 }
