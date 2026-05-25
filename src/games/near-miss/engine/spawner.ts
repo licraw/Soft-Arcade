@@ -43,6 +43,8 @@ type TrafficPacket = {
 };
 
 const TRAFFIC_PACKETS: TrafficPacket[] = [
+  // Packet cars are authored in lane units and car-height units. Keep this
+  // table readable; use tuning.ts for global spawn rhythm and variance.
   {
     id: "single-slow-blocker",
     minElapsed: 0,
@@ -94,16 +96,16 @@ const TRAFFIC_PACKETS: TrafficPacket[] = [
 ];
 
 export function getSpawnInterval(speed: number, elapsed: number) {
-  const densityRamp = Math.min(0.26, elapsed / 180);
+  const densityRamp = Math.min(TUNING.spawnDensityRampMax, elapsed / TUNING.spawnDensityRampSeconds);
 
-  return Math.max(0.58, 1.36 - speed / 900 - densityRamp);
+  return Math.max(TUNING.spawnIntervalFloor, TUNING.spawnIntervalBase - speed / TUNING.spawnSpeedDivisor - densityRamp);
 }
 
 export function spawnTrafficPacket(options: SpawnOptions) {
   const { laneSystem, traffic, carWidth, carHeight, nextId, elapsed, playerSpeed } = options;
   const blockedLanes = new Set(
     traffic
-      .filter((car) => car.y < carHeight * 2.2)
+      .filter((car) => car.y < carHeight * TUNING.spawnBlockedLaneLookaheadCars)
       .map((car) => car.lane)
   );
 
@@ -130,11 +132,11 @@ export function spawnTrafficPacket(options: SpawnOptions) {
 
   packet.cars.forEach((packetCar, index) => {
     const lane = lanes[index];
-    const width = carWidth * (0.9 + Math.random() * 0.12);
-    const height = carHeight * (0.94 + Math.random() * 0.12);
+    const width = carWidth * (TUNING.trafficWidthRandomBase + Math.random() * TUNING.trafficWidthRandomRange);
+    const height = carHeight * (TUNING.trafficHeightRandomBase + Math.random() * TUNING.trafficHeightRandomRange);
     const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
-    const speedVariance = 0.94 + Math.random() * 0.1;
+    const speedVariance = TUNING.trafficSpeedRandomBase + Math.random() * TUNING.trafficSpeedRandomRange;
 
     packetCars.push({
       id,
@@ -146,7 +148,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       y: -height + packetCar.yOffset * carHeight,
       width,
       height,
-      forwardSpeed: Math.max(90, playerSpeed * packetCar.speedRatio * speedVariance),
+      forwardSpeed: Math.max(TUNING.minTrafficForwardSpeed, playerSpeed * packetCar.speedRatio * speedVariance),
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,
       passed: false,
@@ -160,7 +162,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
 
 function choosePacket(elapsed: number) {
   const available = TRAFFIC_PACKETS.filter((packet) => packet.minElapsed <= elapsed);
-  const densityIndex = Math.min(available.length - 1, Math.floor(elapsed / 22));
+  const densityIndex = Math.min(available.length - 1, Math.floor(elapsed / TUNING.spawnDensityBandSeconds));
 
   return available[Math.floor(Math.random() * (densityIndex + 1))] || TRAFFIC_PACKETS[0];
 }
@@ -192,9 +194,9 @@ function getCorridorLane(elapsed: number, laneCount: number) {
 }
 
 function getSubtleLaneOffset(elapsed: number, index: number) {
-  const phase = Math.sin(elapsed * 0.7 + index * 1.9);
+  const phase = Math.sin(elapsed * TUNING.subtleLaneOffsetFrequency + index * TUNING.subtleLaneOffsetPhaseStep);
 
-  return phase * TUNING.laneOffsetAmount * 0.55;
+  return phase * TUNING.laneOffsetAmount * TUNING.subtleLaneOffsetScale;
 }
 
 function clamp(value: number, min: number, max: number) {

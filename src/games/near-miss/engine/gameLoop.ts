@@ -1,12 +1,22 @@
 import { createLaneSystem, getLaneCenter } from "@/games/shared/car/laneSystem";
 import type { CarBounds, LaneSystem } from "@/games/shared/car/types";
-import { expandBounds, hasPlayerPassedTraffic, insetBounds, intersects, isNearMissShellOverlap } from "./collision";
+import { expandBounds, hasPlayerPassedTraffic, intersects, isNearMissShellOverlap } from "./collision";
 import type { NearMissInputState } from "./input";
 import { NEAR_MISS_MODE_CONFIG, type NearMissMode } from "./modes";
 import { chooseRunEndMessage } from "./runEndMessages";
 import { getDistanceScore, getFeedbackForStreak, getNearMissBonus, getSpeedScore, getSurvivalScore, SCORE_TUNING } from "./scoring";
 import { getSpawnInterval, spawnTrafficPacket, type TrafficCar } from "./spawner";
-import { NEAR_MISS_TUNING as TUNING } from "./tuning";
+import {
+  getBaselineSpeed,
+  getDisplayedSpeed,
+  getPlayerBodySize,
+  getPlayerHitbox,
+  getPlayerNearMissShell,
+  getTrafficHitbox,
+  getTrafficNearMissShell,
+  getTrafficResizeBodySize,
+  NEAR_MISS_TUNING as TUNING
+} from "./tuning";
 import { renderNearMiss } from "../render/canvasRenderer";
 
 type GameStatus = "ready" | "running" | "gameOver";
@@ -140,13 +150,14 @@ export class NearMissGameLoop {
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
     const laneSystem = createLaneSystem(displayWidth, TUNING.laneCount);
-    const carWidth = Math.min(62, laneSystem.laneWidth * TUNING.carWidthRatio);
-    const carHeight = carWidth * TUNING.carHeightRatio;
+    const playerBody = getPlayerBodySize(laneSystem.laneWidth);
+    const carWidth = playerBody.width;
+    const carHeight = playerBody.height;
     const playerCenterRatio = this.state.width
       ? (this.state.player.x + this.state.player.width / 2 - this.state.laneSystem.roadLeft) / this.state.laneSystem.roadWidth
       : 0.5;
-    const minX = laneSystem.roadLeft + 8;
-    const maxX = laneSystem.roadLeft + laneSystem.roadWidth - carWidth - 8;
+    const minX = laneSystem.roadLeft + TUNING.roadEdgePadding;
+    const maxX = laneSystem.roadLeft + laneSystem.roadWidth - carWidth - TUNING.roadEdgePadding;
     const playerX = clamp(laneSystem.roadLeft + laneSystem.roadWidth * playerCenterRatio - carWidth / 2, minX, maxX);
     const lanePosition = (playerX + carWidth / 2 - laneSystem.roadLeft) / laneSystem.laneWidth - 0.5;
 
@@ -156,15 +167,16 @@ export class NearMissGameLoop {
     this.state.player = {
       ...this.state.player,
       x: playerX,
-      y: displayHeight - carHeight - 34,
+      y: displayHeight - carHeight - TUNING.playerBottomMargin,
       width: carWidth,
       height: carHeight,
       lanePosition
     };
 
     for (const car of this.state.traffic) {
-      car.width = carWidth * 0.98;
-      car.height = carHeight * 1.02;
+      const trafficBody = getTrafficResizeBodySize(playerBody);
+      car.width = trafficBody.width;
+      car.height = trafficBody.height;
       car.x = getLaneCenter(laneSystem, Math.min(car.lane, laneSystem.lanes - 1)) + car.laneCenterOffset * laneSystem.laneWidth - car.width / 2;
     }
 
@@ -183,8 +195,8 @@ export class NearMissGameLoop {
     return {
       status: this.state.status,
       score: this.state.score,
-      speed: this.state.speed / 5.2,
-      averageSpeed: this.state.elapsed > 0 ? this.state.distance / this.state.elapsed / 5.2 : 0,
+      speed: getDisplayedSpeed(this.state.speed),
+      averageSpeed: this.state.elapsed > 0 ? getDisplayedSpeed(this.state.distance / this.state.elapsed) : 0,
       distance: this.state.distance,
       elapsed: this.state.elapsed,
       nearMisses: this.state.nearMisses,
@@ -198,8 +210,9 @@ export class NearMissGameLoop {
     const width = this.canvas.clientWidth || 720;
     const height = this.canvas.clientHeight || 620;
     const laneSystem = createLaneSystem(width, TUNING.laneCount);
-    const carWidth = Math.min(62, laneSystem.laneWidth * TUNING.carWidthRatio);
-    const carHeight = carWidth * TUNING.carHeightRatio;
+    const playerBody = getPlayerBodySize(laneSystem.laneWidth);
+    const carWidth = playerBody.width;
+    const carHeight = playerBody.height;
     const startLane = Math.floor(laneSystem.lanes / 2);
     const playerX = getLaneCenter(laneSystem, startLane) - carWidth / 2;
 
@@ -211,7 +224,7 @@ export class NearMissGameLoop {
       laneSystem,
       player: {
         x: playerX,
-        y: height - carHeight - 34,
+        y: height - carHeight - TUNING.playerBottomMargin,
         width: carWidth,
         height: carHeight,
         lanePosition: startLane,
@@ -268,8 +281,10 @@ export class NearMissGameLoop {
     const state = this.state;
     const carWidth = state.player.width;
     const carHeight = state.player.height;
-    const baselineSpeed = Math.min(TUNING.maxSpeed - 80, TUNING.cruiseSpeed + state.elapsed * TUNING.speedRampPerSecond);
+    const baselineSpeed = getBaselineSpeed(state.elapsed);
 
+    // Internal speed is deliberately separate from displayed mph. Tune speed
+    // response in tuning.ts before changing the update order here.
     state.elapsed += delta;
     if (state.input.throttle) {
       state.speed += TUNING.throttleAcceleration * delta;
@@ -280,7 +295,7 @@ export class NearMissGameLoop {
     }
     state.speed = clamp(state.speed, TUNING.minSpeed, TUNING.maxSpeed);
     state.distance += state.speed * delta;
-    state.stripeOffset = (state.stripeOffset - state.speed * delta * 0.52) % 54;
+    state.stripeOffset = (state.stripeOffset - state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
     this.updatePlayerHandling(delta);
     this.clampPlayerToRoad();
     state.comboTimer = Math.max(0, state.comboTimer - delta);
@@ -307,11 +322,11 @@ export class NearMissGameLoop {
         this.nextTrafficId += spawned.length;
       }
 
-      this.spawnTimer = getSpawnInterval(state.speed, state.elapsed) * (0.86 + Math.random() * 0.28);
+      this.spawnTimer = getSpawnInterval(state.speed, state.elapsed) * (TUNING.spawnJitterMin + Math.random() * TUNING.spawnJitterRange);
     }
 
     for (const car of state.traffic) {
-      const relativeYSpeed = Math.max(28, state.speed - car.forwardSpeed);
+      const relativeYSpeed = Math.max(TUNING.minRelativeTrafficSpeed, state.speed - car.forwardSpeed);
       car.y += relativeYSpeed * delta;
 
       if (!car.nearMissed && hasPlayerPassedTraffic(state.player, car) && this.canAwardNearMiss(car, relativeYSpeed)) {
@@ -323,7 +338,7 @@ export class NearMissGameLoop {
         if (!car.nearMissed && !car.streakAccounted) {
           car.streakAccounted = true;
           state.streak = Math.max(0, state.streak - 1);
-          state.comboTimer = state.streak > 0 ? Math.min(state.comboTimer, SCORE_TUNING.comboWindow * 0.5) : 0;
+          state.comboTimer = state.streak > 0 ? Math.min(state.comboTimer, SCORE_TUNING.comboWindow * TUNING.missedCarComboWindowScale) : 0;
         }
       }
 
@@ -345,7 +360,7 @@ export class NearMissGameLoop {
       ((getDistanceScore(state.distance) + getSurvivalScore(state.elapsed) + getSpeedScore(state.speed, baselineSpeed, state.elapsed)) *
         speedScoreFactor +
         state.bonusScore +
-        state.streak * 40) *
+        state.streak * TUNING.streakScoreStep) *
         safeChannelScoreFactor
     );
   }
@@ -367,29 +382,33 @@ export class NearMissGameLoop {
     player.lateralVelocity = clamp(player.lateralVelocity, -maxLatSpeed, maxLatSpeed);
     player.lanePosition += player.lateralVelocity * delta;
 
-    if (this.isBetweenLanes() && this.state.speed > TUNING.cruiseSpeed + 70 && this.state.safeChannelTimer > TUNING.safeChannelWindow) {
-      player.lateralVelocity += Math.sin(this.state.elapsed * 9.5) * TUNING.safeChannelInstability * delta;
+    if (
+      this.isBetweenLanes() &&
+      this.state.speed > TUNING.cruiseSpeed + TUNING.safeChannelInstabilitySpeedOffset &&
+      this.state.safeChannelTimer > TUNING.safeChannelWindow
+    ) {
+      player.lateralVelocity += Math.sin(this.state.elapsed * TUNING.safeChannelInstabilityFrequency) * TUNING.safeChannelInstability * delta;
     }
 
     player.x = this.getLanePositionCenter(player.lanePosition) - player.width / 2;
 
     const yawTarget =
       (player.lateralVelocity / maxLatSpeed) * TUNING.visualYawMaxDeg +
-      player.inputSteer * TUNING.visualYawMaxDeg * 0.22;
+      player.inputSteer * TUNING.visualYawMaxDeg * TUNING.visualYawSteerInfluence;
     player.visualYaw += (clamp(yawTarget, -TUNING.visualYawMaxDeg, TUNING.visualYawMaxDeg) - player.visualYaw) * Math.min(1, TUNING.visualYawReturnRate * delta);
   }
 
   private canAwardNearMiss(car: TrafficCar, relativeYSpeed: number) {
     const playerHitbox = this.getPlayerHitbox();
     const trafficHitbox = this.getTrafficHitbox(car);
-    const playerShell = expandBounds(playerHitbox, TUNING.nearMissGrowX, TUNING.nearMissGrowY);
-    const trafficShell = expandBounds(trafficHitbox, TUNING.nearMissGrowX * 0.7, TUNING.nearMissGrowY);
+    const playerShell = getPlayerNearMissShell(playerHitbox);
+    const trafficShell = getTrafficNearMissShell(trafficHitbox);
 
     return relativeYSpeed >= TUNING.minNearMissRelativeSpeed && isNearMissShellOverlap(playerShell, trafficShell, playerHitbox, trafficHitbox);
   }
 
   private awardNearMiss(car: TrafficCar) {
-    const baselineSpeed = Math.min(TUNING.maxSpeed - 80, TUNING.cruiseSpeed + this.state.elapsed * TUNING.speedRampPerSecond);
+    const baselineSpeed = getBaselineSpeed(this.state.elapsed);
     const speedBonusFactor = this.state.input.brake || this.state.speed < baselineSpeed * 0.92 ? SCORE_TUNING.brakingNearMissPenalty : 1;
     const bonus = Math.round(getNearMissBonus(this.state.streak) * speedBonusFactor);
 
@@ -411,17 +430,17 @@ export class NearMissGameLoop {
     if (betweenLanes && nearbySplitTraffic === 0) {
       this.state.safeChannelTimer += delta;
       if (this.state.safeChannelTimer > TUNING.safeChannelWindow && this.state.comboTimer > 0) {
-        this.state.comboTimer = Math.max(0, this.state.comboTimer - delta * 1.6);
+        this.state.comboTimer = Math.max(0, this.state.comboTimer - delta * TUNING.safeChannelComboDecayRate);
       }
       return;
     }
 
     if (!betweenLanes) {
-      this.state.safeChannelTimer = Math.max(0, this.state.safeChannelTimer - delta * 2);
+      this.state.safeChannelTimer = Math.max(0, this.state.safeChannelTimer - delta * TUNING.safeChannelRecoveryRate);
       return;
     }
 
-    this.state.safeChannelTimer = Math.max(0, this.state.safeChannelTimer - delta * 0.75);
+    this.state.safeChannelTimer = Math.max(0, this.state.safeChannelTimer - delta * TUNING.safeChannelTrafficRecoveryRate);
 
     if (
       nearbySplitTraffic >= TUNING.laneSplitBonusThreshold &&
@@ -452,7 +471,7 @@ export class NearMissGameLoop {
     return this.state.traffic.filter((car) => {
       const trafficCenterX = car.x + car.width / 2;
       const inYRange = Math.abs((car.y + car.height / 2) - (this.state.player.y + this.state.player.height / 2)) <= TUNING.laneSplitTrafficYRange;
-      const adjacentSide = Math.abs(trafficCenterX - playerCenterX) <= this.state.laneSystem.laneWidth * 0.78;
+      const adjacentSide = Math.abs(trafficCenterX - playerCenterX) <= this.state.laneSystem.laneWidth * TUNING.laneSplitTrafficXRangeLanes;
 
       return inYRange && adjacentSide && !intersects(this.getPlayerHitbox(), this.getTrafficHitbox(car));
     }).length;
@@ -480,7 +499,7 @@ export class NearMissGameLoop {
       x,
       y,
       age: 0,
-      life: 0.92,
+      life: TUNING.feedbackLifeSeconds,
       tone
     });
     this.nextFeedbackId += 1;
@@ -491,11 +510,11 @@ export class NearMissGameLoop {
   }
 
   getPlayerHitbox() {
-    return insetBounds(this.state.player, TUNING.playerHitboxWidth, TUNING.playerHitboxHeight);
+    return getPlayerHitbox(this.state.player);
   }
 
   getTrafficHitbox(car: TrafficCar) {
-    return insetBounds(car, TUNING.trafficHitboxWidth, TUNING.trafficHitboxHeight);
+    return getTrafficHitbox(car);
   }
 
   getNearMissShell(bounds: CarBounds) {
@@ -503,8 +522,8 @@ export class NearMissGameLoop {
   }
 
   private clampPlayerToRoad() {
-    const minX = this.state.laneSystem.roadLeft + 8;
-    const maxX = this.state.laneSystem.roadLeft + this.state.laneSystem.roadWidth - this.state.player.width - 8;
+    const minX = this.state.laneSystem.roadLeft + TUNING.roadEdgePadding;
+    const maxX = this.state.laneSystem.roadLeft + this.state.laneSystem.roadWidth - this.state.player.width - TUNING.roadEdgePadding;
     const minLane = (minX + this.state.player.width / 2 - this.state.laneSystem.roadLeft) / this.state.laneSystem.laneWidth - 0.5;
     const maxLane = (maxX + this.state.player.width / 2 - this.state.laneSystem.roadLeft) / this.state.laneSystem.laneWidth - 0.5;
 

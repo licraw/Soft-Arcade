@@ -1,15 +1,13 @@
 import type { NearMissSnapshot } from "../engine/gameLoop";
+import { getDisplayedDistanceMiles } from "../engine/tuning";
 
 type NearMissGameOverModalProps = {
   snapshot: NearMissSnapshot;
   onRestart: () => void;
 };
 
-const GAME_SPEED_UNITS_PER_MPH = 5.2;
-const SECONDS_PER_HOUR = 3600;
-
 export function NearMissGameOverModal({ snapshot, onRestart }: NearMissGameOverModalProps) {
-  const distanceMiles = Math.max(0.1, snapshot.distance / GAME_SPEED_UNITS_PER_MPH / SECONDS_PER_HOUR);
+  const distanceMiles = getDisplayedDistanceMiles(snapshot.distance);
   const averageSpeed = Math.max(0, Math.round(snapshot.averageSpeed));
 
   return (

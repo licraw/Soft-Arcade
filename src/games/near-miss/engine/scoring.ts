@@ -1,4 +1,6 @@
 export const SCORE_TUNING = {
+  // Core scoring weights live here. Gameplay-pressure modifiers that depend on
+  // player state, such as safe-channel behavior, live in tuning.ts.
   distanceMultiplier: 0.018,
   survivalMultiplier: 8,
   speedMultiplier: 0.24,

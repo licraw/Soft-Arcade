@@ -1,8 +1,13 @@
 import { drawRoad } from "./road";
 import { drawArcadeCar, playerCarPalette, trafficCarPalettes } from "./sprites";
-import { expandBounds, insetBounds } from "../engine/collision";
 import type { NearMissRuntimeState } from "../engine/gameLoop";
-import { NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
+import {
+  getPlayerHitbox,
+  getPlayerNearMissShell,
+  getTrafficHitbox,
+  getTrafficNearMissShell,
+  NEAR_MISS_TUNING as TUNING
+} from "../engine/tuning";
 import blueSedanAsset from "../ui/blue-sedan.svg";
 import goldSedanAsset from "../ui/gold-sedan.svg";
 import redCarAsset from "../ui/redcar.svg";
@@ -32,7 +37,7 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 
   for (const car of state.traffic) {
     ctx.save();
-    ctx.globalAlpha = 0.86;
+    ctx.globalAlpha = TUNING.trafficRenderAlpha;
     drawTrafficSedan(ctx, car.x, car.y, car.width, car.height, car.paletteIndex);
     ctx.restore();
   }
@@ -59,8 +64,8 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 
 function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
   const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
-  const spriteScaleX = 2.28;
-  const spriteScaleY = 1.42;
+  const spriteScaleX = TUNING.trafficSpriteScaleX;
+  const spriteScaleY = TUNING.trafficSpriteScaleY;
   const spriteWidth = width * spriteScaleX;
   const spriteHeight = height * spriteScaleY;
 
@@ -84,8 +89,8 @@ function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, w
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const { x, y, width, height, visualYaw } = state.player;
-  const spriteScaleX = 2.08;
-  const spriteScaleY = 1.2;
+  const spriteScaleX = TUNING.playerSpriteScaleX;
+  const spriteScaleY = TUNING.playerSpriteScaleY;
   const spriteWidth = width * spriteScaleX;
   const spriteHeight = height * spriteScaleY;
 
@@ -113,14 +118,14 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
 }
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const playerHitbox = insetBounds(state.player, TUNING.playerHitboxWidth, TUNING.playerHitboxHeight);
+  const playerHitbox = getPlayerHitbox(state.player);
 
   ctx.save();
   ctx.lineWidth = 1;
   ctx.strokeStyle = "rgba(60, 255, 143, 0.85)";
   strokeBounds(ctx, playerHitbox);
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
-  strokeBounds(ctx, expandBounds(playerHitbox, TUNING.nearMissGrowX, TUNING.nearMissGrowY));
+  strokeBounds(ctx, getPlayerNearMissShell(playerHitbox));
 
   for (const center of state.laneSystem.centers) {
     ctx.strokeStyle = "rgba(125, 211, 252, 0.26)";
@@ -140,11 +145,11 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   }
 
   for (const car of state.traffic) {
-    const trafficHitbox = insetBounds(car, TUNING.trafficHitboxWidth, TUNING.trafficHitboxHeight);
+    const trafficHitbox = getTrafficHitbox(car);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
     strokeBounds(ctx, trafficHitbox);
     ctx.strokeStyle = "rgba(250, 204, 21, 0.32)";
-    strokeBounds(ctx, expandBounds(trafficHitbox, TUNING.nearMissGrowX * 0.7, TUNING.nearMissGrowY));
+    strokeBounds(ctx, getTrafficNearMissShell(trafficHitbox));
     ctx.strokeStyle = "rgba(60, 255, 143, 0.45)";
     const corridorX = state.laneSystem.centers[car.corridorLane];
     ctx.beginPath();
@@ -163,29 +168,36 @@ function strokeBounds(ctx: CanvasRenderingContext2D, bounds: { x: number; y: num
 }
 
 function drawSpeedLines(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const intensity = Math.max(0, Math.min(1, (state.speed - 360) / 260));
+  const intensity = Math.max(0, Math.min(1, (state.speed - TUNING.speedLineStartSpeed) / TUNING.speedLineSpeedRange));
 
   if (intensity <= 0) {
     return;
   }
 
   ctx.save();
-  ctx.globalAlpha = 0.1 + intensity * 0.2;
+  ctx.globalAlpha = TUNING.speedLineBaseAlpha + intensity * TUNING.speedLineAlphaRange;
   ctx.strokeStyle = "#00e5ff";
-  ctx.lineWidth = 1 + intensity * 2;
+  ctx.lineWidth = TUNING.speedLineBaseWidth + intensity * TUNING.speedLineWidthRange;
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < TUNING.speedLineCount; index += 1) {
     const side = index % 2 === 0 ? -1 : 1;
-    const x = side < 0 ? state.laneSystem.roadLeft - 18 - (index % 3) * 14 : state.laneSystem.roadLeft + state.laneSystem.roadWidth + 18 + (index % 3) * 14;
-    const y = (index * 89 + Math.abs(state.stripeOffset) * 4) % (state.height + 120) - 80;
+    const sideOffset = TUNING.speedLineSideOffset + (index % 3) * TUNING.speedLineSideStep;
+    const x =
+      side < 0
+        ? state.laneSystem.roadLeft - sideOffset
+        : state.laneSystem.roadLeft + state.laneSystem.roadWidth + sideOffset;
+    const y =
+      (index * TUNING.speedLineSpacing + Math.abs(state.stripeOffset) * TUNING.speedLineStripeOffsetScale) %
+        (state.height + TUNING.speedLineModuloPadding) -
+      TUNING.speedLineYOffset;
     ctx.beginPath();
     ctx.moveTo(x, y);
-    ctx.lineTo(x + side * 10, y + 56 + intensity * 52);
+    ctx.lineTo(x + side * TUNING.speedLineSideDrift, y + TUNING.speedLineBaseLength + intensity * TUNING.speedLineLengthRange);
     ctx.stroke();
   }
 
   ctx.fillStyle = "rgba(0, 229, 255, 0.06)";
-  ctx.fillRect(state.laneSystem.roadLeft - 8, 0, 8, state.height);
-  ctx.fillRect(state.laneSystem.roadLeft + state.laneSystem.roadWidth, 0, 8, state.height);
+  ctx.fillRect(state.laneSystem.roadLeft - TUNING.speedLineShoulderGlowWidth, 0, TUNING.speedLineShoulderGlowWidth, state.height);
+  ctx.fillRect(state.laneSystem.roadLeft + state.laneSystem.roadWidth, 0, TUNING.speedLineShoulderGlowWidth, state.height);
   ctx.restore();
 }
