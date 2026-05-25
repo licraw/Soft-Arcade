@@ -1,6 +1,6 @@
 import type { LaneSystem } from "@/games/shared/car/types";
 import { getLaneCenter } from "@/games/shared/car/laneSystem";
-import { NEAR_MISS_TUNING as TUNING } from "./tuning";
+import { getTrafficBodySize, NEAR_MISS_TUNING as TUNING } from "./tuning";
 import { DEFAULT_TRAFFIC_VEHICLE_ID, getSpawnableTrafficVehicleConfigs } from "./vehicleConfig";
 
 export type TrafficCar = {
@@ -24,7 +24,6 @@ export type TrafficCar = {
 type SpawnOptions = {
   laneSystem: LaneSystem;
   traffic: TrafficCar[];
-  carWidth: number;
   carHeight: number;
   nextId: number;
   elapsed: number;
@@ -104,7 +103,7 @@ export function getSpawnInterval(speed: number, elapsed: number) {
 }
 
 export function spawnTrafficPacket(options: SpawnOptions) {
-  const { laneSystem, traffic, carWidth, carHeight, nextId, elapsed, playerSpeed } = options;
+  const { laneSystem, traffic, carHeight, nextId, elapsed, playerSpeed } = options;
   const blockedLanes = new Set(
     traffic
       .filter((car) => car.y < carHeight * TUNING.spawnBlockedLaneLookaheadCars)
@@ -135,8 +134,15 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   packet.cars.forEach((packetCar, index) => {
     const vehicleConfig = chooseTrafficVehicleConfig();
     const lane = lanes[index];
-    const width = carWidth * (TUNING.trafficWidthRandomBase + Math.random() * TUNING.trafficWidthRandomRange);
-    const height = carHeight * (TUNING.trafficHeightRandomBase + Math.random() * TUNING.trafficHeightRandomRange);
+    const trafficBody = getTrafficBodySize(
+      laneSystem.laneWidth,
+      { height: carHeight },
+      vehicleConfig,
+      TUNING.trafficWidthRandomBase + Math.random() * TUNING.trafficWidthRandomRange,
+      TUNING.trafficHeightRandomBase + Math.random() * TUNING.trafficHeightRandomRange
+    );
+    const width = trafficBody.width;
+    const height = trafficBody.height;
     const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
     const speedVariance = TUNING.trafficSpeedRandomBase + Math.random() * TUNING.trafficSpeedRandomRange;
