@@ -66,11 +66,11 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     spawnWeight: 50
   },
   {
-    id: "traffic-van-truck",
-    label: "Van Truck",
+    id: "traffic-box-truck",
+    label: "Box Truck",
     vehicleClass: "van-truck",
-    spritePath: "/games/near-miss/vehicles/traffic-van-truck.svg",
-    spriteAspectRatio: 128 / 192,
+    spritePath: "/games/near-miss/vehicles/boxtruck.svg",
+    spriteAspectRatio: 128 / 224,
     uniformVisualScale: 1.22,
     occupancyWidthLanes: 0.9,
     occupancyLengthScale: 1.28,

@@ -80,7 +80,7 @@ export format, but public runtime copies should be normalized.
   - Use lowercase kebab-case names.
   - Prefix traffic vehicles with `traffic-`.
   - Use descriptive class/color names, for example
-    `traffic-sedan-blue.svg`, `traffic-van-truck.svg`, or
+    `traffic-sedan-blue.svg`, `boxtruck.svg`, or
     `player-sports-car.svg`.
 
 ## Runtime Config Spec
@@ -156,10 +156,9 @@ Near Miss renders vehicles through browser `Image` objects in
   - Compatibility copy of the curated gold sedan.
   - Keep only while older references still expect this stable path.
 
-- `traffic-van-truck.svg`
-  - Cleaned public copy derived from `src/games/near-miss/ui/greentruck.svg`.
-  - The public copy removes the source SVG's checkerboard/export background
-    geometry and keeps only the truck artwork.
+- `boxtruck.svg`
+  - Cleaned public copy derived from `src/games/near-miss/ui/boxtruck.svg`.
+  - Box truck traffic vehicle.
 
 ## Adding A Vehicle
 
