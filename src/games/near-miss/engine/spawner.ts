@@ -1,6 +1,7 @@
 import type { LaneSystem } from "@/games/shared/car/types";
 import { getLaneCenter } from "@/games/shared/car/laneSystem";
 import { NEAR_MISS_TUNING as TUNING } from "./tuning";
+import { DEFAULT_TRAFFIC_VEHICLE_ID } from "./vehicleConfig";
 
 export type TrafficCar = {
   id: number;
@@ -12,6 +13,7 @@ export type TrafficCar = {
   y: number;
   width: number;
   height: number;
+  vehicleConfigId: string;
   forwardSpeed: number;
   paletteIndex: number;
   nearMissed: boolean;
@@ -148,6 +150,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       y: -height + packetCar.yOffset * carHeight,
       width,
       height,
+      vehicleConfigId: DEFAULT_TRAFFIC_VEHICLE_ID,
       forwardSpeed: Math.max(TUNING.minTrafficForwardSpeed, playerSpeed * packetCar.speedRatio * speedVariance),
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,

@@ -8,6 +8,7 @@ import {
   getTrafficNearMissShell,
   NEAR_MISS_TUNING as TUNING
 } from "../engine/tuning";
+import { getVehicleConfig, PLAYER_VEHICLE_ID } from "../engine/vehicleConfig";
 import blueSedanAsset from "../ui/blue-sedan.svg";
 import goldSedanAsset from "../ui/gold-sedan.svg";
 import redCarAsset from "../ui/redcar.svg";
@@ -38,7 +39,7 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   for (const car of state.traffic) {
     ctx.save();
     ctx.globalAlpha = TUNING.trafficRenderAlpha;
-    drawTrafficSedan(ctx, car.x, car.y, car.width, car.height, car.paletteIndex);
+    drawTrafficSedan(ctx, car.x, car.y, car.width, car.height, car.paletteIndex, car.vehicleConfigId);
     ctx.restore();
   }
 
@@ -62,12 +63,21 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   }
 }
 
-function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
+function drawTrafficSedan(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  paletteIndex: number,
+  vehicleConfigId: string
+) {
   const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
   const spriteScaleX = TUNING.trafficSpriteScaleX;
   const spriteScaleY = TUNING.trafficSpriteScaleY;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+  const uniformVisualScale = getVehicleConfig(vehicleConfigId).uniformVisualScale;
+  const spriteWidth = width * spriteScaleX * uniformVisualScale;
+  const spriteHeight = height * spriteScaleY * uniformVisualScale;
 
   ctx.shadowColor = paletteIndex % 2 === 0 ? "rgba(65, 171, 232, 0.22)" : "rgba(224, 172, 42, 0.18)";
   ctx.shadowBlur = 12;
@@ -91,8 +101,9 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
   const { x, y, width, height, visualYaw } = state.player;
   const spriteScaleX = TUNING.playerSpriteScaleX;
   const spriteScaleY = TUNING.playerSpriteScaleY;
-  const spriteWidth = width * spriteScaleX;
-  const spriteHeight = height * spriteScaleY;
+  const uniformVisualScale = getVehicleConfig(PLAYER_VEHICLE_ID).uniformVisualScale;
+  const spriteWidth = width * spriteScaleX * uniformVisualScale;
+  const spriteHeight = height * spriteScaleY * uniformVisualScale;
 
   ctx.save();
   ctx.translate(x + width / 2, y + height / 2);
@@ -119,6 +130,7 @@ function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState)
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const playerHitbox = getPlayerHitbox(state.player);
+  const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
 
   ctx.save();
   ctx.lineWidth = 1;
@@ -126,6 +138,9 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   strokeBounds(ctx, playerHitbox);
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
   strokeBounds(ctx, getPlayerNearMissShell(playerHitbox));
+  ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
+  ctx.font = "700 10px Arial, Helvetica, sans-serif";
+  ctx.fillText(`${playerConfig.label} / ${playerConfig.vehicleClass}`, state.player.x, Math.max(12, state.player.y - 4));
 
   for (const center of state.laneSystem.centers) {
     ctx.strokeStyle = "rgba(125, 211, 252, 0.26)";
@@ -145,6 +160,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   }
 
   for (const car of state.traffic) {
+    const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
     const trafficHitbox = getTrafficHitbox(car);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
     strokeBounds(ctx, trafficHitbox);
@@ -158,7 +174,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.stroke();
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
-    ctx.fillText(`${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
+    ctx.fillText(`${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / ${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
   }
   ctx.restore();
 }
