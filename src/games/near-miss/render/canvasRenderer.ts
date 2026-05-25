@@ -1,8 +1,30 @@
 import { drawRoad } from "./road";
-import { drawArcadeCar, drawPlayerCar, playerCarPalette, trafficCarPalettes } from "./sprites";
+import { drawArcadeCar, playerCarPalette, trafficCarPalettes } from "./sprites";
 import { expandBounds, insetBounds } from "../engine/collision";
 import type { NearMissRuntimeState } from "../engine/gameLoop";
 import { NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
+import blueSedanAsset from "../ui/blue-sedan.svg";
+import goldSedanAsset from "../ui/gold-sedan.svg";
+import redCarAsset from "../ui/redcar.svg";
+
+const redCarImage = typeof window !== "undefined" ? new Image() : null;
+const redCarUrl = typeof redCarAsset === "string" ? redCarAsset : redCarAsset.src;
+const blueSedanImage = typeof window !== "undefined" ? new Image() : null;
+const blueSedanUrl = typeof blueSedanAsset === "string" ? blueSedanAsset : blueSedanAsset.src;
+const goldSedanImage = typeof window !== "undefined" ? new Image() : null;
+const goldSedanUrl = typeof goldSedanAsset === "string" ? goldSedanAsset : goldSedanAsset.src;
+
+if (redCarImage) {
+  redCarImage.src = redCarUrl;
+}
+
+if (blueSedanImage) {
+  blueSedanImage.src = blueSedanUrl;
+}
+
+if (goldSedanImage) {
+  goldSedanImage.src = goldSedanUrl;
+}
 
 export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   drawRoad(ctx, state.laneSystem, state.width, state.height, state.stripeOffset);
@@ -11,26 +33,11 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   for (const car of state.traffic) {
     ctx.save();
     ctx.globalAlpha = 0.86;
-    drawArcadeCar(ctx, {
-      x: car.x,
-      y: car.y,
-      width: car.width,
-      height: car.height,
-      palette: trafficCarPalettes[car.paletteIndex % trafficCarPalettes.length],
-      direction: "up"
-    });
+    drawTrafficSedan(ctx, car.x, car.y, car.width, car.height, car.paletteIndex);
     ctx.restore();
   }
 
-  drawPlayerCar(ctx, {
-    x: state.player.x,
-    y: state.player.y,
-    width: state.player.width,
-    height: state.player.height,
-    palette: playerCarPalette,
-    direction: "up",
-    yawDeg: state.player.visualYaw
-  });
+  drawMainCar(ctx, state);
 
   if (state.debug) {
     drawDebugOverlays(ctx, state);
@@ -48,6 +55,61 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
     ctx.fillText(feedback.text, feedback.x, feedback.y - age * 34);
     ctx.restore();
   }
+}
+
+function drawTrafficSedan(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, paletteIndex: number) {
+  const sedanImage = paletteIndex % 2 === 0 ? blueSedanImage : goldSedanImage;
+  const spriteScaleX = 1.95;
+  const spriteScaleY = 1.22;
+  const spriteWidth = width * spriteScaleX;
+  const spriteHeight = height * spriteScaleY;
+
+  ctx.shadowColor = paletteIndex % 2 === 0 ? "rgba(65, 171, 232, 0.22)" : "rgba(224, 172, 42, 0.18)";
+  ctx.shadowBlur = 12;
+
+  if (sedanImage?.complete && sedanImage.naturalWidth > 0) {
+    ctx.drawImage(sedanImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+    return;
+  }
+
+  drawArcadeCar(ctx, {
+    x,
+    y,
+    width,
+    height,
+    palette: trafficCarPalettes[paletteIndex % trafficCarPalettes.length],
+    direction: "up"
+  });
+}
+
+function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
+  const { x, y, width, height, visualYaw } = state.player;
+  const spriteScaleX = 2.25;
+  const spriteScaleY = 1.3;
+  const spriteWidth = width * spriteScaleX;
+  const spriteHeight = height * spriteScaleY;
+
+  ctx.save();
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.rotate(((visualYaw + 180) * Math.PI) / 180);
+  ctx.translate(-x - width / 2, -y - height / 2);
+  ctx.shadowColor = "rgba(255, 77, 90, 0.46)";
+  ctx.shadowBlur = 22;
+
+  if (redCarImage?.complete && redCarImage.naturalWidth > 0) {
+    ctx.drawImage(redCarImage, x + width / 2 - spriteWidth / 2, y + height / 2 - spriteHeight / 2, spriteWidth, spriteHeight);
+  } else {
+    drawArcadeCar(ctx, {
+      x,
+      y,
+      width,
+      height,
+      palette: playerCarPalette,
+      direction: "up"
+    });
+  }
+
+  ctx.restore();
 }
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {

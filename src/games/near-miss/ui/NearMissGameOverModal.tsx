@@ -5,11 +5,11 @@ type NearMissGameOverModalProps = {
   onRestart: () => void;
 };
 
-const FEET_PER_MILE = 5280;
-const GAME_UNITS_TO_FEET = 5.4;
+const GAME_SPEED_UNITS_PER_MPH = 5.2;
+const SECONDS_PER_HOUR = 3600;
 
 export function NearMissGameOverModal({ snapshot, onRestart }: NearMissGameOverModalProps) {
-  const distanceMiles = Math.max(0.1, (snapshot.distance * GAME_UNITS_TO_FEET) / FEET_PER_MILE);
+  const distanceMiles = Math.max(0.1, snapshot.distance / GAME_SPEED_UNITS_PER_MPH / SECONDS_PER_HOUR);
   const averageSpeed = Math.max(0, Math.round(snapshot.averageSpeed));
 
   return (
