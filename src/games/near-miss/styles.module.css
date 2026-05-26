@@ -21,6 +21,76 @@
   display: block;
 }
 
+.mobileControls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: none;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.mobileSteeringControls,
+.mobilePedalControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.mobilePedalControls {
+  align-items: end;
+}
+
+.mobileControlButton {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(244, 242, 238, 0.24);
+  background: rgba(7, 8, 13, 0.52);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  color: #f4f2ee;
+  font: inherit;
+  font-weight: 900;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.mobileControlButton:active {
+  border-color: rgba(250, 204, 21, 0.7);
+  background: rgba(250, 204, 21, 0.28);
+  color: #fff7c2;
+}
+
+.mobileControlRound {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  font-size: 1.45rem;
+}
+
+.mobileControlPedal {
+  width: 68px;
+  height: 68px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
 .feedbackLine {
   position: absolute;
   left: 50%;
@@ -410,6 +480,10 @@
 }
 
 @media (max-width: 720px) {
+  .mobileControls {
+    display: flex;
+  }
+
   :global(.near-miss-hud) {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 6px;
@@ -421,6 +495,12 @@
 
   .feedbackLine {
     top: 66px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .mobileControls {
+    display: flex;
   }
 }
 
@@ -467,5 +547,27 @@
 
   :global(.near-miss-run-stats span) {
     min-height: 58px;
+  }
+
+  .mobileControls {
+    gap: 12px;
+    padding-right: max(10px, env(safe-area-inset-right));
+    padding-left: max(10px, env(safe-area-inset-left));
+  }
+
+  .mobileSteeringControls,
+  .mobilePedalControls {
+    gap: 8px;
+  }
+
+  .mobileControlRound {
+    width: 52px;
+    height: 52px;
+  }
+
+  .mobileControlPedal {
+    width: 60px;
+    height: 60px;
+    font-size: 0.64rem;
   }
 }

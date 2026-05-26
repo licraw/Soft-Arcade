@@ -6,22 +6,29 @@ export type NearMissInputState = {
 
 type InputHandler = (input: NearMissInputState) => void;
 
-const inputState: NearMissInputState = {
-  steer: 0,
-  throttle: false,
-  brake: false
+export type NearMissControl = "left" | "right" | "throttle" | "brake";
+
+export type NearMissInputController = {
+  setControl: (control: NearMissControl, active: boolean) => void;
+  cleanup: () => void;
 };
 
-const heldKeys = new Set<string>();
+export function createInputController(onInput: InputHandler): NearMissInputController {
+  const inputState: NearMissInputState = {
+    steer: 0,
+    throttle: false,
+    brake: false
+  };
+  const heldKeys = new Set<string>();
+  const heldControls = new Set<NearMissControl>();
 
-export function createInputController(target: HTMLElement, onInput: InputHandler) {
-  const syncKeyboardInput = () => {
-    const left = heldKeys.has("arrowleft") || heldKeys.has("a");
-    const right = heldKeys.has("arrowright") || heldKeys.has("d");
+  const syncInput = () => {
+    const left = heldKeys.has("arrowleft") || heldKeys.has("a") || heldControls.has("left");
+    const right = heldKeys.has("arrowright") || heldKeys.has("d") || heldControls.has("right");
 
     inputState.steer = left && !right ? -1 : right && !left ? 1 : 0;
-    inputState.throttle = heldKeys.has("arrowup") || heldKeys.has("w");
-    inputState.brake = heldKeys.has("arrowdown") || heldKeys.has("s");
+    inputState.throttle = heldKeys.has("arrowup") || heldKeys.has("w") || heldControls.has("throttle");
+    inputState.brake = heldKeys.has("arrowdown") || heldKeys.has("s") || heldControls.has("brake");
     onInput({ ...inputState });
   };
 
@@ -31,7 +38,7 @@ export function createInputController(target: HTMLElement, onInput: InputHandler
     if (["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "d", "w", "s"].includes(key)) {
       event.preventDefault();
       heldKeys.add(key);
-      syncKeyboardInput();
+      syncInput();
     }
   };
 
@@ -41,46 +48,37 @@ export function createInputController(target: HTMLElement, onInput: InputHandler
     if (heldKeys.has(key)) {
       event.preventDefault();
       heldKeys.delete(key);
-      syncKeyboardInput();
+      syncInput();
     }
   };
 
-  const onPointerDown = (event: PointerEvent) => {
-    if (event.target instanceof Element && event.target.closest("button, input, textarea, select, a")) {
-      return;
-    }
-
-    const bounds = target.getBoundingClientRect();
-    inputState.steer = event.clientX - bounds.left < bounds.width / 2 ? -1 : 1;
-
-    event.preventDefault();
-    onInput({ ...inputState });
-  };
-
-  const onPointerUp = () => {
-    inputState.steer = 0;
-    onInput({ ...inputState });
+  const clearPointerInput = () => {
+    heldControls.clear();
+    syncInput();
   };
 
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
-  window.addEventListener("blur", onPointerUp);
-  target.addEventListener("pointerdown", onPointerDown);
-  target.addEventListener("pointerup", onPointerUp);
-  target.addEventListener("pointercancel", onPointerUp);
-  target.addEventListener("pointerleave", onPointerUp);
+  window.addEventListener("blur", clearPointerInput);
 
-  return () => {
-    window.removeEventListener("keydown", onKeyDown);
-    window.removeEventListener("keyup", onKeyUp);
-    window.removeEventListener("blur", onPointerUp);
-    target.removeEventListener("pointerdown", onPointerDown);
-    target.removeEventListener("pointerup", onPointerUp);
-    target.removeEventListener("pointercancel", onPointerUp);
-    target.removeEventListener("pointerleave", onPointerUp);
-    heldKeys.clear();
-    inputState.steer = 0;
-    inputState.throttle = false;
-    inputState.brake = false;
+  return {
+    setControl: (control, active) => {
+      if (active) {
+        heldControls.add(control);
+      } else {
+        heldControls.delete(control);
+      }
+      syncInput();
+    },
+    cleanup: () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", clearPointerInput);
+      heldKeys.clear();
+      heldControls.clear();
+      inputState.steer = 0;
+      inputState.throttle = false;
+      inputState.brake = false;
+    }
   };
 }

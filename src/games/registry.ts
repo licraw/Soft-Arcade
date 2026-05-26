@@ -39,7 +39,7 @@ export const games: GameDefinition[] = [
     instructions: [
       "Hold ArrowLeft and ArrowRight, or A and D, to steer smoothly across the road.",
       "Use ArrowUp or W to push speed, and ArrowDown or S to brake through tight gaps.",
-      "On touch screens, press the left or right side of the game area to steer.",
+      "On touch screens, hold the on-screen left, right, gas, and brake buttons.",
       "Avoid traffic, skim close calls for bonus points, and chain near misses to build a streak."
     ],
     type: "react",

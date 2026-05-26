@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
 import { NearMissGameLoop, type NearMissSnapshot } from "./engine/gameLoop";
-import { createInputController } from "./engine/input";
+import { createInputController, type NearMissControl, type NearMissInputController } from "./engine/input";
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
 import { NearMissHud } from "./ui/NearMissHud";
 import styles from "./styles.module.css";
@@ -27,6 +27,7 @@ export function NearMissGame() {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const loopRef = useRef<NearMissGameLoop | null>(null);
+  const inputRef = useRef<NearMissInputController | null>(null);
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
 
   const persistBestScore = useCallback((score: number) => {
@@ -50,18 +51,20 @@ export function NearMissGame() {
     });
     const resize = () => loop.resize(frame.clientWidth, frame.clientHeight);
     const resizeObserver = new ResizeObserver(resize);
-    const cleanupInput = createInputController(frame, (input) => loop.setInput(input));
+    const input = createInputController((nextInput) => loop.setInput(nextInput));
 
     loopRef.current = loop;
+    inputRef.current = input;
     resize();
     setSnapshot(loop.getSnapshot());
     resizeObserver.observe(frame);
 
     return () => {
-      cleanupInput();
+      input.cleanup();
       resizeObserver.disconnect();
       loop.destroy();
       loopRef.current = null;
+      inputRef.current = null;
     };
   }, [persistBestScore]);
 
@@ -93,9 +96,80 @@ export function NearMissGame() {
         </div>
       ) : null}
 
+      {snapshot.status === "running" ? <NearMissMobileControls inputRef={inputRef} /> : null}
       {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
       {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
     </div>
+  );
+}
+
+type NearMissMobileControlsProps = {
+  inputRef: RefObject<NearMissInputController | null>;
+};
+
+type NearMissControlButtonProps = {
+  control: NearMissControl;
+  className?: string;
+  label: string;
+  inputRef: RefObject<NearMissInputController | null>;
+};
+
+function NearMissMobileControls({ inputRef }: NearMissMobileControlsProps) {
+  return (
+    <div className={styles.mobileControls} aria-label="Near Miss mobile controls">
+      <div className={styles.mobileSteeringControls}>
+        <NearMissControlButton control="left" className={styles.mobileControlRound} label="←" inputRef={inputRef} />
+        <NearMissControlButton control="right" className={styles.mobileControlRound} label="→" inputRef={inputRef} />
+      </div>
+      <div className={styles.mobilePedalControls}>
+        <NearMissControlButton control="brake" className={styles.mobileControlPedal} label="BRAKE" inputRef={inputRef} />
+        <NearMissControlButton control="throttle" className={styles.mobileControlPedal} label="GAS" inputRef={inputRef} />
+      </div>
+    </div>
+  );
+}
+
+function NearMissControlButton({ control, className, label, inputRef }: NearMissControlButtonProps) {
+  const setActive = useCallback(
+    (active: boolean) => {
+      inputRef.current?.setControl(control, active);
+    },
+    [control, inputRef]
+  );
+
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setActive(true);
+    },
+    [setActive]
+  );
+
+  const handlePointerUp = useCallback(
+    (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      setActive(false);
+    },
+    [setActive]
+  );
+
+  return (
+    <button
+      type="button"
+      className={`${styles.mobileControlButton} ${className || ""}`}
+      aria-label={label}
+      onContextMenu={(event) => event.preventDefault()}
+      onPointerCancel={handlePointerUp}
+      onPointerDown={handlePointerDown}
+      onPointerLeave={handlePointerUp}
+      onPointerUp={handlePointerUp}
+    >
+      {label}
+    </button>
   );
 }
 
