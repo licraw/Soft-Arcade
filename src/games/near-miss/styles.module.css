@@ -1,3 +1,12 @@
+.gameShell {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #08090f;
+}
+
 .gameFrame {
   position: relative;
   width: 100%;
@@ -22,17 +31,16 @@
 }
 
 .mobileControls {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: max(14px, env(safe-area-inset-bottom));
-  z-index: 4;
+  position: relative;
   display: none;
   align-items: end;
   justify-content: space-between;
   gap: 18px;
-  padding: 0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
-  pointer-events: none;
+  min-height: calc(92px + env(safe-area-inset-bottom));
+  padding: 12px max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  border-top: 1px solid rgba(244, 242, 238, 0.12);
+  background: rgba(8, 9, 15, 0.96);
+  pointer-events: auto;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -480,6 +488,15 @@
 }
 
 @media (max-width: 720px) {
+  .gameShell {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .gameFrame {
+    height: auto;
+  }
+
   .mobileControls {
     display: flex;
   }
@@ -495,12 +512,6 @@
 
   .feedbackLine {
     top: 66px;
-  }
-}
-
-@media (hover: none), (pointer: coarse) {
-  .mobileControls {
-    display: flex;
   }
 }
 
@@ -551,6 +562,9 @@
 
   .mobileControls {
     gap: 12px;
+    min-height: calc(82px + env(safe-area-inset-bottom));
+    padding-top: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
     padding-right: max(10px, env(safe-area-inset-right));
     padding-left: max(10px, env(safe-area-inset-left));
   }

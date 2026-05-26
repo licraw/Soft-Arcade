@@ -78,27 +78,29 @@ export function NearMissGame() {
   }, []);
 
   return (
-    <div className={styles.gameFrame} ref={frameRef} aria-label="Near Miss game">
-      <canvas ref={canvasRef} className={styles.canvas} aria-label="Near Miss traffic lanes" />
-      <NearMissHud snapshot={snapshot} />
-      {snapshot.status === "ready" ? <div className={styles.feedbackLine}>THREAD THE GAP</div> : null}
+    <div className={styles.gameShell} data-game-shell="near-miss" aria-label="Near Miss game">
+      <div className={styles.gameFrame} ref={frameRef}>
+        <canvas ref={canvasRef} className={styles.canvas} aria-label="Near Miss traffic lanes" />
+        <NearMissHud snapshot={snapshot} />
+        {snapshot.status === "ready" ? <div className={styles.feedbackLine}>THREAD THE GAP</div> : null}
 
-      {snapshot.status === "ready" ? (
-        <div className={styles.startOverlay}>
-          <div className={styles.startPanel}>
-            <p>Soft Arcade</p>
-            <h2>Near Miss</h2>
-            <span>Steer through traffic. Brake late. Chase clean close calls.</span>
-            <button type="button" onClick={startRun}>
-              Start Run
-            </button>
+        {snapshot.status === "ready" ? (
+          <div className={styles.startOverlay}>
+            <div className={styles.startPanel}>
+              <p>Soft Arcade</p>
+              <h2>Near Miss</h2>
+              <span>Steer through traffic. Brake late. Chase clean close calls.</span>
+              <button type="button" onClick={startRun}>
+                Start Run
+              </button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
+        {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
+        {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
+      </div>
       {snapshot.status === "running" ? <NearMissMobileControls inputRef={inputRef} /> : null}
-      {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
-      {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
     </div>
   );
 }

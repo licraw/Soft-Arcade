@@ -927,4 +927,8 @@ a {
   .game-stage {
     height: min(620px, 76vh);
   }
+
+  .game-stage:has([data-game-shell="near-miss"]) {
+    height: min(620px, 86vh);
+  }
 }
