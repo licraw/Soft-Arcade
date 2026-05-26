@@ -95,21 +95,22 @@ Every public sprite needs a matching entry in
 - `uniformVisualScale`: visual-only multiplier for perceived bulk.
 - `occupancyWidthLanes` and `occupancyLengthScale`: gameplay body size, not
   raw SVG size.
-- `collisionWidthRatio` and `collisionHeightRatio`: collision inset from the
-  rendered sprite bounds.
-- `nearMissGrowX` and `nearMissGrowY`: near-miss shell padding around the
-  collision box.
+- `collisionZones`: local zones in normalized sprite coordinates. `x` and `y`
+  use `-0.5` to `0.5` across the rendered SVG; `width` and `height` are
+  fractions of the rendered SVG size.
+- `nearMissGrowX` and `nearMissGrowY`: pixel padding used to expand local
+  collision zones into near-miss zones before transform.
 - `spawnWeight`: use `0` until the vehicle has been checked in game, then tune
   relative to existing traffic weights.
 
 Use current baseline values unless a class genuinely needs different gameplay
 size:
 
-| Vehicle type | `uniformVisualScale` | `occupancyWidthLanes` | `occupancyLengthScale` | `collisionWidthRatio` | `collisionHeightRatio` | `nearMissGrowX` | `nearMissGrowY` |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Player sports coupe | `1` | `0.48` | `1` | `0.78` | `0.86` | `18` | `11` |
-| Traffic sedan | `0.9` | `0.46` | `1` | `0.84` | `0.9` | `13` | `11` |
-| Traffic van/truck | `1.22` | `0.9` | `1.28` | `0.88` | `0.94` | `16` | `13` |
+| Vehicle type | `uniformVisualScale` | `occupancyWidthLanes` | `occupancyLengthScale` | `nearMissGrowX` | `nearMissGrowY` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Player sports coupe | `1` | `0.48` | `1` | `18` | `11` |
+| Traffic sedan | `0.9` | `0.46` | `1` | `13` | `11` |
+| Traffic van/truck | `1.22` | `0.9` | `1.28` | `16` | `13` |
 
 ## Quick Checklist
 
@@ -120,7 +121,8 @@ size:
    geometry.
 4. Add the config entry with `spawnWeight: 0`.
 5. Run the game with debug overlays and verify purple sprite bounds, red
-   collision bounds, and yellow near-miss shells align with the visible vehicle.
+   transformed collision zones, and yellow transformed near-miss zones align
+   with the visible vehicle.
 6. Tune config values only after the sprite looks correct.
 
 ## Rendering

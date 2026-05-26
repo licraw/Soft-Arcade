@@ -25,8 +25,9 @@ Gameplay body size is based on lane width:
   vehicle-class occupancy sizing in `spawner.ts`.
 
 Rendered sprite bounds are calculated from the gameplay body, vehicle visual
-scale, and `spriteAspectRatio`. Collision uses those unrotated rendered bounds
-as its source of truth, then insets them for arcade forgiveness.
+scale, and `spriteAspectRatio`. Collision uses vehicle-local zones defined in
+normalized SVG sprite space, then transforms them through the same rendered
+sprite bounds and yaw used for drawing.
 
 ## Vehicles And Sprite Rendering
 
@@ -37,16 +38,17 @@ Vehicle metadata lives in `vehicleConfig.ts`. Each entry defines:
   `van-truck`.
 - `spritePath`: public SVG path for vehicle assets under
   `public/games/near-miss/vehicles`.
-- `spriteAspectRatio`: intrinsic SVG aspect ratio used by both rendering and
-  collision sprite-bound math.
+- `spriteAspectRatio`: intrinsic SVG aspect ratio used by rendering and shared
+  vehicle transform math.
 - `uniformVisualScale`: render-only multiplier applied after the shared traffic
   sprite scale.
 - `occupancyWidthLanes`: gameplay body width measured in current lane widths.
 - `occupancyLengthScale`: gameplay body length relative to the player body.
-- `collisionWidthRatio` and `collisionHeightRatio`: class-specific insets from
-  rendered sprite bounds.
+- `collisionZones`: normalized local sprite zones. `x` and `y` are centered
+  coordinates from `-0.5` to `0.5` across the rendered SVG; `width` and
+  `height` are fractions of rendered SVG size.
 - `nearMissGrowX` and `nearMissGrowY`: class-specific expansion from collision
-  boxes for reward/danger feedback only.
+  zones for reward/danger feedback only.
 - `spawnWeight`: whether and how often a traffic vehicle can be selected. A
   weight of `0` means the vehicle is registered but not spawnable.
 
@@ -72,28 +74,31 @@ To add a new vehicle class end to end:
 4. Keep `spawnWeight: 0` until the asset is verified in-game.
 5. Only then raise `spawnWeight` above `0`.
 
-Visual yaw is cosmetic only. Collision boxes stay axis-aligned and use unrotated
-rendered sprite bounds.
+Visual yaw remains handling-cosmetic, but collision zones use the same yaw
+transform as the rendered SVG so debug hit zones match what the player sees.
 
 ## Collision And Near Misses
 
-Rendered sprite bounds are derived through:
+Rendered sprite transforms are derived through:
 
-- `getPlayerSpriteBounds`
-- `getTrafficSpriteBounds`
+- `getPlayerVehicleTransform`
+- `getTrafficVehicleTransform`
 
-Hitboxes are inset from those rendered sprite bounds through:
+Each transform contains the SVG render center, render width/height, yaw radians,
+and vehicle config. Local collision zones are converted to world-space oriented
+quadrilaterals through:
 
-- `getPlayerHitbox`
-- `getTrafficHitbox`
+- `getVehicleCollisionPolygons`
 
-Near-miss shells are derived from those hitboxes through:
+Crash checks use a small separating-axis theorem overlap test across all player
+and traffic collision-zone polygons. Near-miss shells are still separate from
+crash collision; they are expanded versions of the same local zones and are
+derived through:
 
-- `getPlayerNearMissShell`
-- `getTrafficNearMissShell`
+- `getVehicleNearMissPolygons`
 
-Near-miss shells never cause crashes; they are checked only after confirming the
-collision boxes do not intersect.
+Near-miss polygons never cause crashes; they are checked only after confirming
+the collision polygons do not overlap.
 
 ## Speed, Braking, And Displayed MPH
 
@@ -124,8 +129,9 @@ dedicated Stage 1 fairness pass.
 
 - lane centers
 - lane seams/safe-channel status
-- player and traffic collision boxes
-- player and traffic near-miss shells
+- rendered SVG bounds
+- player and traffic transformed collision zones
+- player and traffic transformed near-miss zones
 - current packet id and corridor lane
 
-Use this before tuning collision, body size, or packet layout.
+Use this before tuning local collision zones, body size, or packet layout.

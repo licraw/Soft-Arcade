@@ -1,14 +1,13 @@
 import { drawRoad } from "./road";
 import type { NearMissRuntimeState } from "../engine/gameLoop";
+import { NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
 import {
-  getPlayerHitbox,
-  getPlayerNearMissShell,
-  getPlayerSpriteBounds,
-  getTrafficHitbox,
-  getTrafficNearMissShell,
-  getTrafficSpriteBounds,
-  NEAR_MISS_TUNING as TUNING
-} from "../engine/tuning";
+  getPlayerVehicleTransform,
+  getTrafficVehicleTransform,
+  getVehicleCollisionPolygons,
+  getVehicleNearMissPolygons,
+  type VehicleZonePolygon
+} from "../engine/vehicleGeometry";
 import { getVehicleConfig, NEAR_MISS_VEHICLE_CONFIGS, PLAYER_VEHICLE_ID } from "../engine/vehicleConfig";
 
 const vehicleImages = new Map<string, HTMLImageElement>();
@@ -54,36 +53,35 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 function drawTrafficVehicle(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, vehicleConfigId: string) {
   const vehicleConfig = getVehicleConfig(vehicleConfigId);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const spriteBounds = getTrafficSpriteBounds({ x, y, width, height }, vehicleConfig);
+  const transform = getTrafficVehicleTransform({ x, y, width, height }, vehicleConfig);
 
   ctx.shadowColor = vehicleConfig.vehicleClass === "van-truck" ? "rgba(60, 255, 143, 0.18)" : "rgba(65, 171, 232, 0.2)";
   ctx.shadowBlur = 12;
 
   if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
-    drawImageInBounds(ctx, vehicleImage, spriteBounds);
+    drawImageInBounds(ctx, vehicleImage, transform.bounds);
     return;
   }
 
-  drawMissingVehicleAsset(ctx, spriteBounds);
+  drawMissingVehicleAsset(ctx, transform.bounds);
 }
 
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const { x, y, width, height, visualYaw } = state.player;
   const vehicleConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const spriteBounds = getPlayerSpriteBounds(state.player);
+  const transform = getPlayerVehicleTransform(state.player);
 
   ctx.save();
-  ctx.translate(x + width / 2, y + height / 2);
-  ctx.rotate(((visualYaw + 180) * Math.PI) / 180);
-  ctx.translate(-x - width / 2, -y - height / 2);
+  ctx.translate(transform.centerX, transform.centerY);
+  ctx.rotate(transform.yawRadians);
+  ctx.translate(-transform.centerX, -transform.centerY);
   ctx.shadowColor = "rgba(255, 77, 90, 0.46)";
   ctx.shadowBlur = 22;
 
   if (vehicleImage?.complete && vehicleImage.naturalWidth > 0) {
-    drawImageInBounds(ctx, vehicleImage, spriteBounds);
+    drawImageInBounds(ctx, vehicleImage, transform.bounds);
   } else {
-    drawMissingVehicleAsset(ctx, spriteBounds);
+    drawMissingVehicleAsset(ctx, transform.bounds);
   }
 
   ctx.restore();
@@ -111,23 +109,23 @@ function drawMissingVehicleAsset(ctx: CanvasRenderingContext2D, bounds: { x: num
 }
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
-  const playerHitbox = getPlayerHitbox(state.player);
   const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
+  const playerTransform = getPlayerVehicleTransform(state.player);
 
   ctx.save();
   ctx.lineWidth = 1;
   ctx.strokeStyle = "rgba(125, 211, 252, 0.58)";
   strokeBounds(ctx, state.player);
   ctx.strokeStyle = "rgba(216, 180, 254, 0.55)";
-  strokeBounds(ctx, getPlayerSpriteBounds(state.player));
+  strokeBounds(ctx, playerTransform.bounds);
   ctx.strokeStyle = "rgba(60, 255, 143, 0.85)";
-  strokeBounds(ctx, playerHitbox);
+  strokeZonePolygons(ctx, getVehicleCollisionPolygons(playerTransform));
   ctx.strokeStyle = "rgba(250, 204, 21, 0.55)";
-  strokeBounds(ctx, getPlayerNearMissShell(playerHitbox));
+  strokeZonePolygons(ctx, getVehicleNearMissPolygons(playerTransform));
   ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
   ctx.font = "700 10px Arial, Helvetica, sans-serif";
   ctx.fillText(
-    `${playerConfig.label} / ${playerConfig.vehicleClass} / visual yaw ${state.player.visualYaw.toFixed(1)}deg only`,
+    `${playerConfig.label} / ${playerConfig.vehicleClass} / yaw ${state.player.visualYaw.toFixed(1)}deg`,
     state.player.x,
     Math.max(12, state.player.y - 4)
   );
@@ -151,15 +149,15 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
 
   for (const car of state.traffic) {
     const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
-    const trafficHitbox = getTrafficHitbox(car, vehicleConfig);
+    const trafficTransform = getTrafficVehicleTransform(car, vehicleConfig);
     ctx.strokeStyle = "rgba(125, 211, 252, 0.5)";
     strokeBounds(ctx, car);
     ctx.strokeStyle = "rgba(216, 180, 254, 0.5)";
-    strokeBounds(ctx, getTrafficSpriteBounds(car, vehicleConfig));
+    strokeBounds(ctx, trafficTransform.bounds);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
-    strokeBounds(ctx, trafficHitbox);
+    strokeZonePolygons(ctx, getVehicleCollisionPolygons(trafficTransform));
     ctx.strokeStyle = "rgba(250, 204, 21, 0.32)";
-    strokeBounds(ctx, getTrafficNearMissShell(trafficHitbox, vehicleConfig));
+    strokeZonePolygons(ctx, getVehicleNearMissPolygons(trafficTransform));
     ctx.strokeStyle = "rgba(60, 255, 143, 0.45)";
     const corridorX = state.laneSystem.centers[car.corridorLane];
     ctx.beginPath();
@@ -168,11 +166,25 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.stroke();
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
-    ctx.fillText(`${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / ${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
+    ctx.fillText(`${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw 0deg / ${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
   }
   ctx.restore();
 }
 
 function strokeBounds(ctx: CanvasRenderingContext2D, bounds: { x: number; y: number; width: number; height: number }) {
   ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+}
+
+function strokeZonePolygons(ctx: CanvasRenderingContext2D, polygons: readonly VehicleZonePolygon[]) {
+  for (const polygon of polygons) {
+    ctx.beginPath();
+    ctx.moveTo(polygon.points[0].x, polygon.points[0].y);
+
+    for (let index = 1; index < polygon.points.length; index += 1) {
+      ctx.lineTo(polygon.points[index].x, polygon.points[index].y);
+    }
+
+    ctx.closePath();
+    ctx.stroke();
+  }
 }

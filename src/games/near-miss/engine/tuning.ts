@@ -1,5 +1,4 @@
 import type { CarBounds } from "@/games/shared/car/types";
-import { expandBounds, insetBounds } from "./collision";
 import { getVehicleConfig, PLAYER_VEHICLE_ID, type NearMissVehicleConfig } from "./vehicleConfig";
 
 // Near Miss tuning is intentionally centralized here. Prefer moving literals into
@@ -39,12 +38,10 @@ export const NEAR_MISS_TUNING = {
   playerBottomMargin: 34,
 
   // Gameplay occupancy body sizing. Rendered sprite bounds are derived from
-  // these bodies, and collision is then inset from the rendered bounds.
+  // these bodies. Crash and near-miss zones live in vehicleConfig.ts.
   carWidthRatio: 0.48,
   carHeightRatio: 1.34,
 
-  // Collision boxes are inset from rendered sprite bounds for arcade forgiveness.
-  // Near-miss shells expand from collision boxes and never cause crashes.
   minNearMissRelativeSpeed: 62,
   minRelativeTrafficSpeed: 28,
 
@@ -97,8 +94,8 @@ export const NEAR_MISS_TUNING = {
   stripeSpeedScale: 0.52,
   stripeRepeatDistance: 54,
 
-  // Sprite overdraw. These define rendered SVG bounds; collision is inset from
-  // those bounds while remaining axis-aligned and yaw-independent.
+  // Sprite overdraw. These define rendered SVG bounds used by rendering and
+  // transformed local collision zones.
   trafficSpriteScaleX: 2.28,
   trafficSpriteScaleY: 1.42,
   playerSpriteScaleX: 2.08,
@@ -177,32 +174,4 @@ export function getDisplayedDistanceMiles(distance: number) {
     NEAR_MISS_TUNING.minimumDisplayedMiles,
     distance / NEAR_MISS_TUNING.displayedSpeedDivisor / NEAR_MISS_TUNING.secondsPerHour
   );
-}
-
-export function getPlayerHitbox(bounds: CarBounds) {
-  const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
-
-  // Collision is based on the unrotated rendered SVG bounds. Visual yaw is
-  // cosmetic in the renderer and must not affect collision math.
-  return getVehicleCollisionBox(getPlayerSpriteBounds(bounds), playerConfig);
-}
-
-export function getTrafficHitbox(bounds: CarBounds, vehicleConfig: NearMissVehicleConfig) {
-  return getVehicleCollisionBox(getTrafficSpriteBounds(bounds, vehicleConfig), vehicleConfig);
-}
-
-export function getVehicleCollisionBox(spriteBounds: CarBounds, vehicleConfig: NearMissVehicleConfig) {
-  return insetBounds(spriteBounds, vehicleConfig.collisionWidthRatio, vehicleConfig.collisionHeightRatio);
-}
-
-export function getPlayerNearMissShell(playerHitbox: CarBounds) {
-  return getVehicleNearMissShell(playerHitbox, getVehicleConfig(PLAYER_VEHICLE_ID));
-}
-
-export function getTrafficNearMissShell(trafficHitbox: CarBounds, vehicleConfig: NearMissVehicleConfig) {
-  return getVehicleNearMissShell(trafficHitbox, vehicleConfig);
-}
-
-export function getVehicleNearMissShell(hitbox: CarBounds, vehicleConfig: NearMissVehicleConfig) {
-  return expandBounds(hitbox, vehicleConfig.nearMissGrowX, vehicleConfig.nearMissGrowY);
 }
