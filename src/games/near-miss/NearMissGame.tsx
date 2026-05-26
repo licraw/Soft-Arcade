@@ -221,6 +221,9 @@ export function NearMissGame() {
     };
   }, [mobilePlayMode]);
 
+  const reserveMobileControls = mobilePlayMode && snapshot.status !== "ready";
+  const mobileControlsDisabled = mobilePaused || snapshot.status !== "running";
+
   return (
     <div className={styles.gameShell} data-game-shell="near-miss" data-mobile-play-mode={mobilePlayMode ? "true" : undefined} ref={shellRef} aria-label="Near Miss game">
       {mobilePlayMode ? (
@@ -256,7 +259,7 @@ export function NearMissGame() {
         {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
         {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
       </div>
-      {snapshot.status === "running" ? <NearMissMobileControls inputRef={inputRef} disabled={mobilePaused} /> : null}
+      {reserveMobileControls ? <NearMissMobileControls inputRef={inputRef} disabled={mobileControlsDisabled} /> : null}
     </div>
   );
 }
@@ -276,7 +279,7 @@ type NearMissControlButtonProps = {
 
 function NearMissMobileControls({ inputRef, disabled }: NearMissMobileControlsProps) {
   return (
-    <div className={styles.mobileControls} aria-label="Near Miss mobile controls">
+    <div className={styles.mobileControls} data-controls-disabled={disabled ? "true" : undefined} aria-label="Near Miss mobile controls" aria-disabled={disabled}>
       <div className={styles.mobileSteeringControls}>
         <NearMissControlButton control="left" className={styles.mobileControlRound} disabled={disabled} label="←" inputRef={inputRef} />
         <NearMissControlButton control="right" className={styles.mobileControlRound} disabled={disabled} label="→" inputRef={inputRef} />

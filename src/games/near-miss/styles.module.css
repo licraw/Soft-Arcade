@@ -126,6 +126,10 @@
   cursor: default;
 }
 
+.mobileControls[data-controls-disabled="true"] {
+  opacity: 0.72;
+}
+
 .mobileControlRound {
   width: 58px;
   height: 58px;
