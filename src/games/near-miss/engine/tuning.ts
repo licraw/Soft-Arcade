@@ -8,7 +8,7 @@ export const NEAR_MISS_TUNING = {
   // Road/lane geometry. The road width formula itself lives in shared laneSystem.
   laneCount: 4,
   roadWidthScale: 0.95,
-  debug: false,
+  debug: true,
 
   // Internal speed units. HUD mph is a simple display transform, not simulation.
   minSpeed: 190,

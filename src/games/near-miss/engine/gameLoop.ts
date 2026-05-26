@@ -33,6 +33,7 @@ export type NearMissSnapshot = {
   streak: number;
   bestScore: number;
   message: string;
+  debug: boolean;
 };
 
 type Feedback = {
@@ -204,7 +205,8 @@ export class NearMissGameLoop {
       nearMisses: this.state.nearMisses,
       streak: this.state.streak,
       bestScore: this.state.bestScore,
-      message: this.state.message
+      message: this.state.message,
+      debug: this.state.debug
     };
   }
 
