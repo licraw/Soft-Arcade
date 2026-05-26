@@ -39,9 +39,9 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     nearMissGrowX: 18,
     nearMissGrowY: 11,
     collisionZones: [
-      { id: "center-body", x: 0, y: 0.03, width: 0.43, height: 0.56 },
-      { id: "front-taper", x: 0, y: -0.3, width: 0.32, height: 0.25 },
-      { id: "rear-taper", x: 0, y: 0.34, width: 0.36, height: 0.2 }
+      { id: "center-body", x: 0, y: 0.03, width: 0.48, height: 0.6 },
+      { id: "front-taper", x: 0, y: -0.31, width: 0.38, height: 0.27 },
+      { id: "rear-taper", x: 0, y: 0.35, width: 0.42, height: 0.23 }
     ],
     spawnWeight: 0
   },
