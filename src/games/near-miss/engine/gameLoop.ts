@@ -1,6 +1,6 @@
 import { createLaneSystem, getLaneCenter } from "@/games/shared/car/laneSystem";
 import type { CarBounds, LaneSystem } from "@/games/shared/car/types";
-import { hasPlayerPassedTraffic, intersects, isNearMissShellOverlap } from "./collision";
+import { hasPlayerPassedTraffic } from "./collision";
 import type { NearMissInputState } from "./input";
 import { NEAR_MISS_MODE_CONFIG, type NearMissMode } from "./modes";
 import { chooseRunEndMessage } from "./runEndMessages";
@@ -10,13 +10,17 @@ import {
   getBaselineSpeed,
   getDisplayedSpeed,
   getPlayerBodySize,
-  getPlayerHitbox,
-  getPlayerNearMissShell,
   getTrafficBodySize,
-  getTrafficHitbox,
-  getTrafficNearMissShell,
   NEAR_MISS_TUNING as TUNING
 } from "./tuning";
+import {
+  doVehicleZonesOverlap,
+  getPlayerVehicleTransform,
+  getTrafficVehicleTransform,
+  getVehicleCollisionPolygons,
+  getVehicleNearMissPolygons,
+  isVehicleNearMissOverlap
+} from "./vehicleGeometry";
 import { getVehicleConfig } from "./vehicleConfig";
 import { renderNearMiss } from "../render/canvasRenderer";
 
@@ -344,7 +348,7 @@ export class NearMissGameLoop {
         }
       }
 
-      if (intersects(this.getPlayerHitbox(), this.getTrafficHitbox(car))) {
+      if (this.isPlayerCollidingWithTraffic(car)) {
         this.endRun();
         return;
       }
@@ -402,12 +406,17 @@ export class NearMissGameLoop {
 
   private canAwardNearMiss(car: TrafficCar, relativeYSpeed: number) {
     const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
-    const playerHitbox = this.getPlayerHitbox();
-    const trafficHitbox = this.getTrafficHitbox(car);
-    const playerShell = getPlayerNearMissShell(playerHitbox);
-    const trafficShell = getTrafficNearMissShell(trafficHitbox, vehicleConfig);
+    const playerTransform = getPlayerVehicleTransform(this.state.player);
+    const trafficTransform = getTrafficVehicleTransform(car, vehicleConfig);
+    const playerCollisionZones = getVehicleCollisionPolygons(playerTransform);
+    const trafficCollisionZones = getVehicleCollisionPolygons(trafficTransform);
+    const playerNearMissZones = getVehicleNearMissPolygons(playerTransform);
+    const trafficNearMissZones = getVehicleNearMissPolygons(trafficTransform);
 
-    return relativeYSpeed >= TUNING.minNearMissRelativeSpeed && isNearMissShellOverlap(playerShell, trafficShell, playerHitbox, trafficHitbox);
+    return (
+      relativeYSpeed >= TUNING.minNearMissRelativeSpeed &&
+      isVehicleNearMissOverlap(playerNearMissZones, trafficNearMissZones, playerCollisionZones, trafficCollisionZones)
+    );
   }
 
   private awardNearMiss(car: TrafficCar) {
@@ -476,7 +485,7 @@ export class NearMissGameLoop {
       const inYRange = Math.abs((car.y + car.height / 2) - (this.state.player.y + this.state.player.height / 2)) <= TUNING.laneSplitTrafficYRange;
       const adjacentSide = Math.abs(trafficCenterX - playerCenterX) <= this.state.laneSystem.laneWidth * TUNING.laneSplitTrafficXRangeLanes;
 
-      return inYRange && adjacentSide && !intersects(this.getPlayerHitbox(), this.getTrafficHitbox(car));
+      return inYRange && adjacentSide && !this.isPlayerCollidingWithTraffic(car);
     }).length;
   }
 
@@ -512,12 +521,12 @@ export class NearMissGameLoop {
     renderNearMiss(this.ctx, this.state);
   }
 
-  getPlayerHitbox() {
-    return getPlayerHitbox(this.state.player);
-  }
+  private isPlayerCollidingWithTraffic(car: TrafficCar) {
+    const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
+    const playerZones = getVehicleCollisionPolygons(getPlayerVehicleTransform(this.state.player));
+    const trafficZones = getVehicleCollisionPolygons(getTrafficVehicleTransform(car, vehicleConfig));
 
-  getTrafficHitbox(car: TrafficCar) {
-    return getTrafficHitbox(car, getVehicleConfig(car.vehicleConfigId));
+    return doVehicleZonesOverlap(playerZones, trafficZones);
   }
 
   private clampPlayerToRoad() {

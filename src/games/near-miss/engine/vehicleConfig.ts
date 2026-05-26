@@ -1,5 +1,13 @@
 export type NearMissVehicleClass = "sports-coupe" | "sedan" | "van-truck";
 
+export type NearMissVehicleCollisionZone = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type NearMissVehicleConfig = {
   id: string;
   label: string;
@@ -9,10 +17,9 @@ export type NearMissVehicleConfig = {
   uniformVisualScale: number;
   occupancyWidthLanes: number;
   occupancyLengthScale: number;
-  collisionWidthRatio: number;
-  collisionHeightRatio: number;
   nearMissGrowX: number;
   nearMissGrowY: number;
+  collisionZones: NearMissVehicleCollisionZone[];
   spawnWeight: number;
 };
 
@@ -29,10 +36,13 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     uniformVisualScale: 1,
     occupancyWidthLanes: 0.48,
     occupancyLengthScale: 1,
-    collisionWidthRatio: 0.78,
-    collisionHeightRatio: 0.86,
     nearMissGrowX: 18,
     nearMissGrowY: 11,
+    collisionZones: [
+      { id: "center-body", x: 0, y: 0.03, width: 0.43, height: 0.56 },
+      { id: "front-taper", x: 0, y: -0.3, width: 0.32, height: 0.25 },
+      { id: "rear-taper", x: 0, y: 0.34, width: 0.36, height: 0.2 }
+    ],
     spawnWeight: 0
   },
   {
@@ -44,10 +54,13 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     uniformVisualScale: 0.9,
     occupancyWidthLanes: 0.46,
     occupancyLengthScale: 1,
-    collisionWidthRatio: 0.84,
-    collisionHeightRatio: 0.9,
     nearMissGrowX: 13,
     nearMissGrowY: 11,
+    collisionZones: [
+      { id: "center-cabin", x: 0, y: 0.04, width: 0.56, height: 0.54 },
+      { id: "front-taper", x: 0, y: -0.3, width: 0.44, height: 0.25 },
+      { id: "rear-taper", x: 0, y: 0.32, width: 0.48, height: 0.23 }
+    ],
     spawnWeight: 50
   },
   {
@@ -59,10 +72,13 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     uniformVisualScale: 0.9,
     occupancyWidthLanes: 0.46,
     occupancyLengthScale: 1,
-    collisionWidthRatio: 0.84,
-    collisionHeightRatio: 0.9,
     nearMissGrowX: 13,
     nearMissGrowY: 11,
+    collisionZones: [
+      { id: "center-cabin", x: 0, y: 0.04, width: 0.56, height: 0.54 },
+      { id: "front-taper", x: 0, y: -0.3, width: 0.44, height: 0.25 },
+      { id: "rear-taper", x: 0, y: 0.32, width: 0.48, height: 0.23 }
+    ],
     spawnWeight: 50
   },
   {
@@ -74,10 +90,13 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     uniformVisualScale: 1.22,
     occupancyWidthLanes: 0.9,
     occupancyLengthScale: 1.28,
-    collisionWidthRatio: 0.88,
-    collisionHeightRatio: 0.94,
     nearMissGrowX: 16,
     nearMissGrowY: 13,
+    collisionZones: [
+      { id: "cargo-box", x: 0, y: 0.18, width: 0.68, height: 0.58 },
+      { id: "cab", x: 0, y: -0.28, width: 0.56, height: 0.31 },
+      { id: "rear-bumper", x: 0, y: 0.46, width: 0.64, height: 0.08 }
+    ],
     spawnWeight: 12
   }
 ] as const satisfies readonly NearMissVehicleConfig[];
