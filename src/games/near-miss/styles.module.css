@@ -42,6 +42,94 @@
   animation: near-miss-ready-pulse 1.8s ease-in-out infinite;
 }
 
+.debugToolbar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: min(760px, calc(100% - 20px));
+  min-height: 46px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid rgba(250, 204, 21, 0.26);
+  border-radius: 8px;
+  background: rgba(8, 9, 15, 0.74);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+.debugToolbarStatus {
+  min-width: 0;
+}
+
+.debugToolbarStatus span {
+  display: block;
+  color: #facc15;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.debugToolbarStatus strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #f4f2ee;
+  font-size: 0.9rem;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debugToolbarStats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.debugToolbarStats span {
+  min-height: 26px;
+  padding: 6px 8px;
+  border: 1px solid rgba(244, 242, 238, 0.1);
+  border-radius: 7px;
+  background: rgba(244, 242, 238, 0.05);
+  color: rgba(244, 242, 238, 0.78);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.debugToolbar button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: #facc15;
+  color: #171207;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .debugToolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .debugToolbarStats {
+    display: none;
+  }
+}
+
 .startOverlay,
 :global(.near-miss-modal) {
   position: absolute;

@@ -19,7 +19,8 @@ const initialSnapshot: NearMissSnapshot = {
   nearMisses: 0,
   streak: 0,
   bestScore: 0,
-  message: "THREAD THE GAP"
+  message: "THREAD THE GAP",
+  debug: false
 };
 
 export function NearMissGame() {
@@ -92,7 +93,32 @@ export function NearMissGame() {
         </div>
       ) : null}
 
-      {snapshot.status === "gameOver" ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
+      {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
+      {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
+    </div>
+  );
+}
+
+type NearMissDebugToolbarProps = {
+  snapshot: NearMissSnapshot;
+  onRestart: () => void;
+};
+
+function NearMissDebugToolbar({ snapshot, onRestart }: NearMissDebugToolbarProps) {
+  return (
+    <div className={styles.debugToolbar} role="toolbar" aria-label="Near Miss debug crash controls">
+      <div className={styles.debugToolbarStatus}>
+        <span>Debug Crash</span>
+        <strong>{snapshot.message}</strong>
+      </div>
+      <div className={styles.debugToolbarStats} aria-label="Crash stats">
+        <span>Score {snapshot.score.toLocaleString()}</span>
+        <span>Near Misses {snapshot.nearMisses}</span>
+        <span>Time {snapshot.elapsed.toFixed(1)}s</span>
+      </div>
+      <button type="button" onClick={onRestart}>
+        Restart
+      </button>
     </div>
   );
 }
