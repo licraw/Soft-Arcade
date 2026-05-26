@@ -1,5 +1,5 @@
 import { drawRoad } from "./road";
-import type { NearMissRuntimeState } from "../engine/gameLoop";
+import type { CrashVehicleMotion, NearMissRuntimeState } from "../engine/gameLoop";
 import { NEAR_MISS_TUNING as TUNING } from "../engine/tuning";
 import {
   getPlayerVehicleTransform,
@@ -24,9 +24,10 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   drawRoad(ctx, state.laneSystem, state.width, state.height, state.stripeOffset);
 
   for (const car of state.traffic) {
+    const crashMotion = getTrafficCrashMotion(state, car.id);
     ctx.save();
     ctx.globalAlpha = TUNING.trafficRenderAlpha;
-    drawTrafficVehicle(ctx, car.x, car.y, car.width, car.height, car.vehicleConfigId);
+    drawTrafficVehicle(ctx, car.x, car.y, car.width, car.height, car.vehicleConfigId, crashMotion);
     ctx.restore();
   }
 
@@ -50,11 +51,22 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
   }
 }
 
-function drawTrafficVehicle(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, vehicleConfigId: string) {
+function drawTrafficVehicle(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  vehicleConfigId: string,
+  crashMotion: CrashVehicleMotion | null = null
+) {
   const vehicleConfig = getVehicleConfig(vehicleConfigId);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const transform = getTrafficVehicleTransform({ x, y, width, height }, vehicleConfig);
+  const transform = getTrafficVehicleTransform(applyCrashMotion({ x, y, width, height }, crashMotion), vehicleConfig, crashMotion?.yawDeg || 0);
 
+  ctx.translate(transform.centerX, transform.centerY);
+  ctx.rotate(transform.yawRadians);
+  ctx.translate(-transform.centerX, -transform.centerY);
   ctx.shadowColor = vehicleConfig.vehicleClass === "van-truck" ? "rgba(60, 255, 143, 0.18)" : "rgba(65, 171, 232, 0.2)";
   ctx.shadowBlur = 12;
 
@@ -69,7 +81,8 @@ function drawTrafficVehicle(ctx: CanvasRenderingContext2D, x: number, y: number,
 function drawMainCar(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const vehicleConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
   const vehicleImage = vehicleImages.get(vehicleConfig.id);
-  const transform = getPlayerVehicleTransform(state.player);
+  const player = getCrashAdjustedPlayer(state);
+  const transform = getPlayerVehicleTransform(player);
 
   ctx.save();
   ctx.translate(transform.centerX, transform.centerY);
@@ -110,12 +123,13 @@ function drawMissingVehicleAsset(ctx: CanvasRenderingContext2D, bounds: { x: num
 
 function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntimeState) {
   const playerConfig = getVehicleConfig(PLAYER_VEHICLE_ID);
-  const playerTransform = getPlayerVehicleTransform(state.player);
+  const player = getCrashAdjustedPlayer(state);
+  const playerTransform = getPlayerVehicleTransform(player);
 
   ctx.save();
   ctx.lineWidth = 1;
   ctx.strokeStyle = "rgba(125, 211, 252, 0.58)";
-  strokeBounds(ctx, state.player);
+  strokeBounds(ctx, player);
   ctx.strokeStyle = "rgba(216, 180, 254, 0.55)";
   strokeBounds(ctx, playerTransform.bounds);
   ctx.strokeStyle = "rgba(60, 255, 143, 0.85)";
@@ -126,8 +140,8 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
   ctx.font = "700 10px Arial, Helvetica, sans-serif";
   ctx.fillText(
     `${playerConfig.label} / ${playerConfig.vehicleClass} / yaw ${state.player.visualYaw.toFixed(1)}deg`,
-    state.player.x,
-    Math.max(12, state.player.y - 4)
+    player.x,
+    Math.max(12, player.y - 4)
   );
 
   for (const center of state.laneSystem.centers) {
@@ -149,9 +163,11 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
 
   for (const car of state.traffic) {
     const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
-    const trafficTransform = getTrafficVehicleTransform(car, vehicleConfig);
+    const crashMotion = getTrafficCrashMotion(state, car.id);
+    const trafficBounds = applyCrashMotion(car, crashMotion);
+    const trafficTransform = getTrafficVehicleTransform(trafficBounds, vehicleConfig, crashMotion?.yawDeg || 0);
     ctx.strokeStyle = "rgba(125, 211, 252, 0.5)";
-    strokeBounds(ctx, car);
+    strokeBounds(ctx, trafficBounds);
     ctx.strokeStyle = "rgba(216, 180, 254, 0.5)";
     strokeBounds(ctx, trafficTransform.bounds);
     ctx.strokeStyle = "rgba(255, 77, 90, 0.75)";
@@ -166,9 +182,44 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.stroke();
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
-    ctx.fillText(`${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw 0deg / ${car.packetId} c${car.corridorLane}`, car.x, Math.max(12, car.y - 4));
+    ctx.fillText(
+      `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg / ${car.packetId} c${car.corridorLane}`,
+      trafficBounds.x,
+      Math.max(12, trafficBounds.y - 4)
+    );
   }
   ctx.restore();
+}
+
+function getCrashAdjustedPlayer(state: NearMissRuntimeState) {
+  const crashMotion = state.crash?.player || null;
+
+  if (!crashMotion) {
+    return state.player;
+  }
+
+  return {
+    ...state.player,
+    x: state.player.x + crashMotion.offsetX,
+    y: state.player.y + crashMotion.offsetY,
+    visualYaw: state.player.visualYaw + crashMotion.yawDeg
+  };
+}
+
+function getTrafficCrashMotion(state: NearMissRuntimeState, trafficId: number) {
+  return state.crash?.hitTrafficId === trafficId ? state.crash.traffic : null;
+}
+
+function applyCrashMotion<T extends { x: number; y: number }>(bounds: T, crashMotion: CrashVehicleMotion | null): T {
+  if (!crashMotion) {
+    return bounds;
+  }
+
+  return {
+    ...bounds,
+    x: bounds.x + crashMotion.offsetX,
+    y: bounds.y + crashMotion.offsetY
+  };
 }
 
 function strokeBounds(ctx: CanvasRenderingContext2D, bounds: { x: number; y: number; width: number; height: number }) {

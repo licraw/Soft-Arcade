@@ -94,6 +94,18 @@ export const NEAR_MISS_TUNING = {
   stripeSpeedScale: 0.52,
   stripeRepeatDistance: 54,
 
+  // Arcade crash aftermath. These values only drive the short post-impact
+  // slide/spin phase before the existing game-over summary appears.
+  crashDurationSeconds: 1.15,
+  crashLinearDamping: 2.7,
+  crashAngularDamping: 2.25,
+  crashRoadSlowdownRate: 3.4,
+  crashMinRoadSpeedRatio: 0.12,
+  playerCrashImpulse: 180,
+  trafficCrashImpulse: 150,
+  playerSpinIntensity: 220,
+  trafficSpinIntensity: 180,
+
   // Sprite overdraw. These define rendered SVG bounds used by rendering and
   // transformed local collision zones.
   trafficSpriteScaleX: 2.28,

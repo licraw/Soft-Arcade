@@ -24,7 +24,7 @@ import {
 import { getVehicleConfig } from "./vehicleConfig";
 import { renderNearMiss } from "../render/canvasRenderer";
 
-type GameStatus = "ready" | "running" | "gameOver";
+type GameStatus = "ready" | "running" | "crashing" | "gameOver";
 
 export type NearMissSnapshot = {
   status: GameStatus;
@@ -57,6 +57,30 @@ type PlayerCar = CarBounds & {
   visualYaw: number;
 };
 
+export type CrashImpactSide = "front" | "rear" | "left" | "right" | "center";
+
+export type CrashVehicleMotion = {
+  offsetX: number;
+  offsetY: number;
+  velocityX: number;
+  velocityY: number;
+  yawDeg: number;
+  angularVelocityDeg: number;
+};
+
+export type CrashState = {
+  age: number;
+  duration: number;
+  hitTrafficId: number;
+  normalX: number;
+  normalY: number;
+  impactSide: CrashImpactSide;
+  player: CrashVehicleMotion;
+  traffic: CrashVehicleMotion;
+  roadSpeedAtImpact: number;
+  finalMessage: string;
+};
+
 export type NearMissRuntimeState = {
   status: GameStatus;
   mode: NearMissMode;
@@ -81,6 +105,7 @@ export type NearMissRuntimeState = {
   stripeOffset: number;
   message: string;
   input: NearMissInputState;
+  crash: CrashState | null;
   debug: boolean;
 };
 
@@ -122,8 +147,13 @@ export class NearMissGameLoop {
   }
 
   start() {
+    if (this.state.status === "crashing") {
+      return;
+    }
+
     this.stop();
     this.state.status = "running";
+    this.state.crash = null;
     this.state.message = "CLEAN RUN";
     this.lastFrame = performance.now();
     this.animationFrame = requestAnimationFrame(this.tick);
@@ -204,6 +234,10 @@ export class NearMissGameLoop {
       this.start();
     }
 
+    if (this.state.status !== "ready" && this.state.status !== "running") {
+      return;
+    }
+
     this.state.input = input;
   }
 
@@ -270,6 +304,7 @@ export class NearMissGameLoop {
         throttle: false,
         brake: false
       },
+      crash: null,
       debug: TUNING.debug
     };
   }
@@ -280,6 +315,8 @@ export class NearMissGameLoop {
 
     if (this.state.status === "running") {
       this.update(delta);
+    } else if (this.state.status === "crashing") {
+      this.updateCrashing(delta);
     }
 
     this.render();
@@ -289,7 +326,7 @@ export class NearMissGameLoop {
       this.lastSnapshotAt = timestamp;
     }
 
-    if (this.state.status === "running") {
+    if (this.state.status === "running" || this.state.status === "crashing") {
       this.animationFrame = requestAnimationFrame(this.tick);
     }
   };
@@ -358,7 +395,7 @@ export class NearMissGameLoop {
       }
 
       if (this.isPlayerCollidingWithTraffic(car)) {
-        this.endRun();
+        this.startCrash(car, relativeYSpeed);
         return;
       }
     }
@@ -378,6 +415,51 @@ export class NearMissGameLoop {
         state.streak * TUNING.streakScoreStep) *
         safeChannelScoreFactor
     );
+  }
+
+  private updateCrashing(delta: number) {
+    const crash = this.state.crash;
+
+    if (!crash) {
+      this.finishRunAfterCrash();
+      return;
+    }
+
+    crash.age += delta;
+    this.state.speed = Math.max(
+      crash.roadSpeedAtImpact * TUNING.crashMinRoadSpeedRatio,
+      this.state.speed * Math.exp(-TUNING.crashRoadSlowdownRate * delta)
+    );
+    this.state.stripeOffset = (this.state.stripeOffset - this.state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
+    this.updateCrashMotion(crash.player, delta);
+    this.updateCrashMotion(crash.traffic, delta);
+
+    for (const car of this.state.traffic) {
+      if (car.id === crash.hitTrafficId) {
+        continue;
+      }
+
+      const relativeYSpeed = Math.max(TUNING.minRelativeTrafficSpeed, this.state.speed - car.forwardSpeed);
+      car.y += relativeYSpeed * delta;
+    }
+
+    this.state.traffic = this.state.traffic.filter((car) => car.y < this.state.height + car.height);
+    this.state.feedbacks = this.state.feedbacks
+      .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
+      .filter((feedback) => feedback.age < feedback.life);
+
+    if (crash.age >= crash.duration) {
+      this.finishRunAfterCrash();
+    }
+  }
+
+  private updateCrashMotion(motion: CrashVehicleMotion, delta: number) {
+    motion.offsetX += motion.velocityX * delta;
+    motion.offsetY += motion.velocityY * delta;
+    motion.yawDeg += motion.angularVelocityDeg * delta;
+    motion.velocityX *= Math.exp(-TUNING.crashLinearDamping * delta);
+    motion.velocityY *= Math.exp(-TUNING.crashLinearDamping * delta);
+    motion.angularVelocityDeg *= Math.exp(-TUNING.crashAngularDamping * delta);
   }
 
   private updatePlayerHandling(delta: number) {
@@ -498,9 +580,63 @@ export class NearMissGameLoop {
     }).length;
   }
 
-  private endRun() {
+  private startCrash(hitCar: TrafficCar, relativeYSpeed: number) {
     const runEndMessage = chooseRunEndMessage(this.lastRunEndMessage);
     this.lastRunEndMessage = runEndMessage;
+    const playerCenter = getBoundsCenter(this.state.player);
+    const trafficCenter = getBoundsCenter(hitCar);
+    const normal = normalizeVector(playerCenter.x - trafficCenter.x, playerCenter.y - trafficCenter.y, 0, -1);
+    const impactSide = getImpactSide(normal.x, normal.y);
+    const speedRatio = clamp(this.state.speed / TUNING.maxSpeed, 0.35, 1);
+    const sideSign = normal.x >= 0 ? 1 : -1;
+    const playerLateralPixels = this.state.player.lateralVelocity * this.state.laneSystem.laneWidth;
+    const rearEndFactor = normal.y > 0.35 ? 1.2 : 0.85;
+
+    this.state.status = "crashing";
+    this.state.message = runEndMessage;
+    this.state.input = {
+      steer: 0,
+      throttle: false,
+      brake: false
+    };
+    this.state.player.inputSteer = 0;
+    this.state.crash = {
+      age: 0,
+      duration: TUNING.crashDurationSeconds,
+      hitTrafficId: hitCar.id,
+      normalX: normal.x,
+      normalY: normal.y,
+      impactSide,
+      roadSpeedAtImpact: this.state.speed,
+      finalMessage: runEndMessage,
+      player: {
+        offsetX: 0,
+        offsetY: 0,
+        velocityX: playerLateralPixels * 0.55 + normal.x * TUNING.playerCrashImpulse * speedRatio,
+        velocityY: -90 * speedRatio + normal.y * 90,
+        yawDeg: 0,
+        angularVelocityDeg: sideSign * (180 + TUNING.playerSpinIntensity * speedRatio) + this.state.player.lateralVelocity * 80
+      },
+      traffic: {
+        offsetX: 0,
+        offsetY: 0,
+        velocityX: -normal.x * TUNING.trafficCrashImpulse * speedRatio + playerLateralPixels * 0.25,
+        velocityY: relativeYSpeed * 0.55 * rearEndFactor + Math.max(60, this.state.speed * 0.12),
+        yawDeg: 0,
+        angularVelocityDeg: -sideSign * (120 + TUNING.trafficSpinIntensity * speedRatio)
+      }
+    };
+    this.emitSnapshot();
+  }
+
+  private finishRunAfterCrash() {
+    const crash = this.state.crash;
+    const runEndMessage = crash?.finalMessage || chooseRunEndMessage(this.lastRunEndMessage);
+
+    if (!crash) {
+      this.lastRunEndMessage = runEndMessage;
+    }
+
     this.state.status = "gameOver";
     this.state.message = runEndMessage;
     this.addFeedback(runEndMessage, this.state.player.x + this.state.player.width / 2, this.state.player.y - 8, "danger");
@@ -575,6 +711,41 @@ export class NearMissGameLoop {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getBoundsCenter(bounds: CarBounds) {
+  return {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2
+  };
+}
+
+function normalizeVector(x: number, y: number, fallbackX: number, fallbackY: number) {
+  const length = Math.hypot(x, y);
+
+  if (length < 0.0001) {
+    return {
+      x: fallbackX,
+      y: fallbackY
+    };
+  }
+
+  return {
+    x: x / length,
+    y: y / length
+  };
+}
+
+function getImpactSide(normalX: number, normalY: number): CrashImpactSide {
+  if (Math.abs(normalX) < 0.2 && Math.abs(normalY) < 0.2) {
+    return "center";
+  }
+
+  if (Math.abs(normalX) > Math.abs(normalY)) {
+    return normalX > 0 ? "right" : "left";
+  }
+
+  return normalY > 0 ? "front" : "rear";
 }
 
 function createNearMissLaneSystem(width: number): LaneSystem {

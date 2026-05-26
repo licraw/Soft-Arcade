@@ -31,8 +31,8 @@ export function getPlayerVehicleTransform(player: CarBounds & { visualYaw: numbe
   return createVehicleTransform(bounds, vehicleConfig, (player.visualYaw + 180) * DEG_TO_RAD);
 }
 
-export function getTrafficVehicleTransform(bounds: CarBounds, vehicleConfig: NearMissVehicleConfig): VehicleSpriteTransform {
-  return createVehicleTransform(getTrafficSpriteBounds(bounds, vehicleConfig), vehicleConfig, 0);
+export function getTrafficVehicleTransform(bounds: CarBounds, vehicleConfig: NearMissVehicleConfig, yawDeg = 0): VehicleSpriteTransform {
+  return createVehicleTransform(getTrafficSpriteBounds(bounds, vehicleConfig), vehicleConfig, yawDeg * DEG_TO_RAD);
 }
 
 export function getVehicleCollisionPolygons(transform: VehicleSpriteTransform) {
