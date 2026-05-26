@@ -96,11 +96,15 @@ export const NEAR_MISS_TUNING = {
 
   // Arcade crash aftermath. These values only drive the short post-impact
   // slide/spin phase before the existing game-over summary appears.
-  crashDurationSeconds: 1.15,
+  crashDurationLowSpeed: 1.02,
+  crashDurationHighSpeed: 1.35,
   crashLinearDamping: 2.7,
   crashAngularDamping: 2.25,
-  crashRoadSlowdownRate: 3.4,
-  crashMinRoadSpeedRatio: 0.12,
+  crashRoadSlowdownRateLowSpeed: 3.8,
+  crashRoadSlowdownRateHighSpeed: 1.65,
+  crashMinRoadSpeedRatioLowSpeed: 0.1,
+  crashMinRoadSpeedRatioHighSpeed: 0.34,
+  crashSpeedMomentumThreshold: 780,
   playerCrashImpulse: 180,
   trafficCrashImpulse: 150,
   playerSpinIntensity: 220,

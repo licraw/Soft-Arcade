@@ -78,6 +78,8 @@ export type CrashState = {
   player: CrashVehicleMotion;
   traffic: CrashVehicleMotion;
   roadSpeedAtImpact: number;
+  roadSlowdownRate: number;
+  minRoadSpeedRatio: number;
   finalMessage: string;
 };
 
@@ -427,8 +429,8 @@ export class NearMissGameLoop {
 
     crash.age += delta;
     this.state.speed = Math.max(
-      crash.roadSpeedAtImpact * TUNING.crashMinRoadSpeedRatio,
-      this.state.speed * Math.exp(-TUNING.crashRoadSlowdownRate * delta)
+      crash.roadSpeedAtImpact * crash.minRoadSpeedRatio,
+      this.state.speed * Math.exp(-crash.roadSlowdownRate * delta)
     );
     this.state.stripeOffset = (this.state.stripeOffset - this.state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
     this.updateCrashMotion(crash.player, delta);
@@ -588,9 +590,13 @@ export class NearMissGameLoop {
     const normal = normalizeVector(playerCenter.x - trafficCenter.x, playerCenter.y - trafficCenter.y, 0, -1);
     const impactSide = getImpactSide(normal.x, normal.y);
     const speedRatio = clamp(this.state.speed / TUNING.maxSpeed, 0.35, 1);
+    const momentumRatio = getCrashMomentumRatio(this.state.speed);
     const sideSign = normal.x >= 0 ? 1 : -1;
     const playerLateralPixels = this.state.player.lateralVelocity * this.state.laneSystem.laneWidth;
     const rearEndFactor = normal.y > 0.35 ? 1.2 : 0.85;
+    const crashDuration = lerp(TUNING.crashDurationLowSpeed, TUNING.crashDurationHighSpeed, momentumRatio);
+    const roadSlowdownRate = lerp(TUNING.crashRoadSlowdownRateLowSpeed, TUNING.crashRoadSlowdownRateHighSpeed, momentumRatio);
+    const minRoadSpeedRatio = lerp(TUNING.crashMinRoadSpeedRatioLowSpeed, TUNING.crashMinRoadSpeedRatioHighSpeed, momentumRatio);
 
     this.state.status = "crashing";
     this.state.message = runEndMessage;
@@ -602,12 +608,14 @@ export class NearMissGameLoop {
     this.state.player.inputSteer = 0;
     this.state.crash = {
       age: 0,
-      duration: TUNING.crashDurationSeconds,
+      duration: crashDuration,
       hitTrafficId: hitCar.id,
       normalX: normal.x,
       normalY: normal.y,
       impactSide,
       roadSpeedAtImpact: this.state.speed,
+      roadSlowdownRate,
+      minRoadSpeedRatio,
       finalMessage: runEndMessage,
       player: {
         offsetX: 0,
@@ -711,6 +719,14 @@ export class NearMissGameLoop {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function lerp(start: number, end: number, amount: number) {
+  return start + (end - start) * amount;
+}
+
+function getCrashMomentumRatio(speed: number) {
+  return clamp((speed - TUNING.cruiseSpeed) / (TUNING.crashSpeedMomentumThreshold - TUNING.cruiseSpeed), 0, 1);
 }
 
 function getBoundsCenter(bounds: CarBounds) {
