@@ -9,8 +9,17 @@ type InputHandler = (input: NearMissInputState) => void;
 export type NearMissControl = "left" | "right" | "throttle" | "brake";
 
 export type NearMissInputController = {
-  setControl: (control: NearMissControl, active: boolean) => void;
+  pressControl: (control: NearMissControl, pointerId: number) => void;
+  releaseControl: (control: NearMissControl, pointerId: number) => void;
+  clearAllInputs: () => void;
   cleanup: () => void;
+};
+
+const exclusiveControls: Partial<Record<NearMissControl, NearMissControl>> = {
+  left: "right",
+  right: "left",
+  throttle: "brake",
+  brake: "throttle"
 };
 
 export function createInputController(onInput: InputHandler): NearMissInputController {
@@ -20,15 +29,21 @@ export function createInputController(onInput: InputHandler): NearMissInputContr
     brake: false
   };
   const heldKeys = new Set<string>();
-  const heldControls = new Set<NearMissControl>();
+  const controlPointers = new Map<NearMissControl, number>();
 
   const syncInput = () => {
-    const left = heldKeys.has("arrowleft") || heldKeys.has("a") || heldControls.has("left");
-    const right = heldKeys.has("arrowright") || heldKeys.has("d") || heldControls.has("right");
+    const controlLeft = controlPointers.has("left");
+    const controlRight = controlPointers.has("right");
+    const keyLeft = heldKeys.has("arrowleft") || heldKeys.has("a");
+    const keyRight = heldKeys.has("arrowright") || heldKeys.has("d");
+    const left = controlLeft || (!controlRight && keyLeft);
+    const right = controlRight || (!controlLeft && keyRight);
+    const controlThrottle = controlPointers.has("throttle");
+    const controlBrake = controlPointers.has("brake");
 
     inputState.steer = left && !right ? -1 : right && !left ? 1 : 0;
-    inputState.throttle = heldKeys.has("arrowup") || heldKeys.has("w") || heldControls.has("throttle");
-    inputState.brake = heldKeys.has("arrowdown") || heldKeys.has("s") || heldControls.has("brake");
+    inputState.throttle = controlThrottle || (!controlBrake && (heldKeys.has("arrowup") || heldKeys.has("w")));
+    inputState.brake = controlBrake || (!controlThrottle && (heldKeys.has("arrowdown") || heldKeys.has("s")));
     onInput({ ...inputState });
   };
 
@@ -52,30 +67,40 @@ export function createInputController(onInput: InputHandler): NearMissInputContr
     }
   };
 
-  const clearPointerInput = () => {
-    heldControls.clear();
+  const clearAllInputs = () => {
+    heldKeys.clear();
+    controlPointers.clear();
     syncInput();
   };
 
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
-  window.addEventListener("blur", clearPointerInput);
+  window.addEventListener("blur", clearAllInputs);
 
   return {
-    setControl: (control, active) => {
-      if (active) {
-        heldControls.add(control);
-      } else {
-        heldControls.delete(control);
+    pressControl: (control, pointerId) => {
+      const exclusiveControl = exclusiveControls[control];
+
+      if (exclusiveControl) {
+        controlPointers.delete(exclusiveControl);
       }
+      controlPointers.set(control, pointerId);
       syncInput();
     },
+    releaseControl: (control, pointerId) => {
+      if (controlPointers.get(control) !== pointerId) {
+        return;
+      }
+      controlPointers.delete(control);
+      syncInput();
+    },
+    clearAllInputs,
     cleanup: () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("blur", clearPointerInput);
+      window.removeEventListener("blur", clearAllInputs);
       heldKeys.clear();
-      heldControls.clear();
+      controlPointers.clear();
       inputState.steer = 0;
       inputState.throttle = false;
       inputState.brake = false;

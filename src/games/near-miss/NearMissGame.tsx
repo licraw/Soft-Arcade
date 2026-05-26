@@ -8,6 +8,7 @@ import { NearMissHud } from "./ui/NearMissHud";
 import styles from "./styles.module.css";
 
 const BEST_SCORE_KEY = "soft-arcade-near-miss-best-score";
+const MOBILE_PLAY_BREAKPOINT = "(max-width: 720px)";
 
 const initialSnapshot: NearMissSnapshot = {
   status: "ready",
@@ -24,11 +25,14 @@ const initialSnapshot: NearMissSnapshot = {
 };
 
 export function NearMissGame() {
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const loopRef = useRef<NearMissGameLoop | null>(null);
   const inputRef = useRef<NearMissInputController | null>(null);
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
+  const [mobilePlayMode, setMobilePlayMode] = useState(false);
+  const [mobilePaused, setMobilePaused] = useState(false);
 
   const persistBestScore = useCallback((score: number) => {
     window.localStorage.setItem(BEST_SCORE_KEY, String(score));
@@ -60,6 +64,7 @@ export function NearMissGame() {
     resizeObserver.observe(frame);
 
     return () => {
+      input.clearAllInputs();
       input.cleanup();
       resizeObserver.disconnect();
       loop.destroy();
@@ -68,17 +73,168 @@ export function NearMissGame() {
     };
   }, [persistBestScore]);
 
-  const startRun = useCallback(() => {
-    loopRef.current?.start();
+  const clearAllInputs = useCallback(() => {
+    inputRef.current?.clearAllInputs();
   }, []);
 
-  const restartRun = useCallback(() => {
+  const isMobileLayout = useCallback(() => window.matchMedia(MOBILE_PLAY_BREAKPOINT).matches, []);
+
+  const focusMobileGame = useCallback(() => {
+    if (!isMobileLayout()) {
+      return Promise.resolve(false);
+    }
+
+    const shell = shellRef.current;
+
+    if (!shell) {
+      return Promise.resolve(false);
+    }
+
+    const viewportPadding = 8;
+    const bottomVisibilityBias = 18;
+    const shellRect = shell.getBoundingClientRect();
+    const shellTop = shellRect.top + window.scrollY;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const availableHeight = viewportHeight - viewportPadding * 2;
+    const centeredTop = (availableHeight - shellRect.height) / 2;
+    const desiredTop =
+      shellRect.height <= availableHeight
+        ? Math.max(viewportPadding, centeredTop - bottomVisibilityBias)
+        : viewportPadding;
+    const targetTop = shellTop - desiredTop;
+
+    window.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: "auto"
+    });
+
+    return new Promise<boolean>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => resolve(true), 60);
+      });
+    });
+  }, [isMobileLayout]);
+
+  const enterMobilePlayMode = useCallback(async () => {
+    const didFocus = await focusMobileGame();
+
+    if (didFocus) {
+      setMobilePlayMode(true);
+    }
+
+    return didFocus;
+  }, [focusMobileGame]);
+
+  const startRun = useCallback(async () => {
+    clearAllInputs();
+    const didEnterMobilePlayMode = await enterMobilePlayMode();
+    setMobilePaused(false);
+    loopRef.current?.start();
+
+    if (!didEnterMobilePlayMode) {
+      setMobilePlayMode(false);
+    }
+  }, [clearAllInputs, enterMobilePlayMode]);
+
+  const restartRun = useCallback(async () => {
+    clearAllInputs();
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    const didEnterMobilePlayMode = await enterMobilePlayMode();
+    setMobilePaused(false);
     loopRef.current?.restart(bestScore);
-  }, []);
+
+    if (!didEnterMobilePlayMode) {
+      setMobilePlayMode(false);
+    }
+  }, [clearAllInputs, enterMobilePlayMode]);
+
+  const exitRun = useCallback(() => {
+    clearAllInputs();
+    const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    loopRef.current?.cancelRun(bestScore);
+    setMobilePaused(false);
+    setMobilePlayMode(false);
+  }, [clearAllInputs]);
+
+  const pauseRun = useCallback(() => {
+    clearAllInputs();
+    loopRef.current?.pause();
+    setMobilePaused(true);
+  }, [clearAllInputs]);
+
+  const resumeRun = useCallback(() => {
+    clearAllInputs();
+    setMobilePaused(false);
+    loopRef.current?.start();
+  }, [clearAllInputs]);
+
+  useEffect(() => {
+    if (snapshot.status !== "running") {
+      clearAllInputs();
+      setMobilePaused(false);
+    }
+  }, [clearAllInputs, snapshot.status]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        clearAllInputs();
+        if (snapshot.status === "running") {
+          loopRef.current?.pause();
+          setMobilePaused(true);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [clearAllInputs, snapshot.status]);
+
+  useEffect(() => {
+    if (!mobilePlayMode) {
+      return;
+    }
+
+    const scrollY = window.scrollY;
+    const { body } = document;
+    const previousPosition = body.style.position;
+    const previousTop = body.style.top;
+    const previousWidth = body.style.width;
+    const previousOverflow = body.style.overflow;
+
+    body.classList.add("near-miss-mobile-play-mode");
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    return () => {
+      body.classList.remove("near-miss-mobile-play-mode");
+      body.style.position = previousPosition;
+      body.style.top = previousTop;
+      body.style.width = previousWidth;
+      body.style.overflow = previousOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [mobilePlayMode]);
 
   return (
-    <div className={styles.gameShell} data-game-shell="near-miss" aria-label="Near Miss game">
+    <div className={styles.gameShell} data-game-shell="near-miss" data-mobile-play-mode={mobilePlayMode ? "true" : undefined} ref={shellRef} aria-label="Near Miss game">
+      {mobilePlayMode ? (
+        <div className={styles.mobilePlayActions} aria-label="Near Miss mobile play mode controls">
+          {snapshot.status === "running" ? (
+            <button type="button" onClick={mobilePaused ? resumeRun : pauseRun}>
+              {mobilePaused ? "Resume" : "Pause"}
+            </button>
+          ) : null}
+          <button type="button" onClick={exitRun}>
+            Exit
+          </button>
+        </div>
+      ) : null}
       <div className={styles.gameFrame} ref={frameRef}>
         <canvas ref={canvasRef} className={styles.canvas} aria-label="Near Miss traffic lanes" />
         <NearMissHud snapshot={snapshot} />
@@ -100,75 +256,116 @@ export function NearMissGame() {
         {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
         {snapshot.status === "gameOver" && !snapshot.debug ? <NearMissGameOverModal snapshot={snapshot} onRestart={restartRun} /> : null}
       </div>
-      {snapshot.status === "running" ? <NearMissMobileControls inputRef={inputRef} /> : null}
+      {snapshot.status === "running" ? <NearMissMobileControls inputRef={inputRef} disabled={mobilePaused} /> : null}
     </div>
   );
 }
 
 type NearMissMobileControlsProps = {
   inputRef: RefObject<NearMissInputController | null>;
+  disabled: boolean;
 };
 
 type NearMissControlButtonProps = {
   control: NearMissControl;
   className?: string;
+  disabled: boolean;
   label: string;
   inputRef: RefObject<NearMissInputController | null>;
 };
 
-function NearMissMobileControls({ inputRef }: NearMissMobileControlsProps) {
+function NearMissMobileControls({ inputRef, disabled }: NearMissMobileControlsProps) {
   return (
     <div className={styles.mobileControls} aria-label="Near Miss mobile controls">
       <div className={styles.mobileSteeringControls}>
-        <NearMissControlButton control="left" className={styles.mobileControlRound} label="←" inputRef={inputRef} />
-        <NearMissControlButton control="right" className={styles.mobileControlRound} label="→" inputRef={inputRef} />
+        <NearMissControlButton control="left" className={styles.mobileControlRound} disabled={disabled} label="←" inputRef={inputRef} />
+        <NearMissControlButton control="right" className={styles.mobileControlRound} disabled={disabled} label="→" inputRef={inputRef} />
       </div>
       <div className={styles.mobilePedalControls}>
-        <NearMissControlButton control="brake" className={styles.mobileControlPedal} label="BRAKE" inputRef={inputRef} />
-        <NearMissControlButton control="throttle" className={styles.mobileControlPedal} label="GAS" inputRef={inputRef} />
+        <NearMissControlButton control="brake" className={styles.mobileControlPedal} disabled={disabled} label="BRAKE" inputRef={inputRef} />
+        <NearMissControlButton control="throttle" className={styles.mobileControlPedal} disabled={disabled} label="GAS" inputRef={inputRef} />
       </div>
     </div>
   );
 }
 
-function NearMissControlButton({ control, className, label, inputRef }: NearMissControlButtonProps) {
-  const setActive = useCallback(
-    (active: boolean) => {
-      inputRef.current?.setControl(control, active);
+function NearMissControlButton({ control, className, disabled, label, inputRef }: NearMissControlButtonProps) {
+  const activePointerIdRef = useRef<number | null>(null);
+
+  const pressControl = useCallback(
+    (pointerId: number) => {
+      inputRef.current?.pressControl(control, pointerId);
     },
     [control, inputRef]
   );
 
+  const releaseControl = useCallback(
+    (pointerId: number) => {
+      inputRef.current?.releaseControl(control, pointerId);
+    },
+    [control, inputRef]
+  );
+
+  useEffect(() => {
+    return () => {
+      const activePointerId = activePointerIdRef.current;
+
+      if (activePointerId !== null) {
+        releaseControl(activePointerId);
+        activePointerIdRef.current = null;
+      }
+    };
+  }, [releaseControl]);
+
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      setActive(true);
+      if (disabled) {
+        return;
+      }
+      const activePointerId = activePointerIdRef.current;
+
+      if (activePointerId !== null && activePointerId !== event.pointerId) {
+        releaseControl(activePointerId);
+      }
+
+      activePointerIdRef.current = event.pointerId;
+
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+      pressControl(event.pointerId);
     },
-    [setActive]
+    [disabled, pressControl, releaseControl]
   );
 
-  const handlePointerUp = useCallback(
+  const handlePointerEnd = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
+      if (activePointerIdRef.current !== event.pointerId) {
+        return;
+      }
+
+      activePointerIdRef.current = null;
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
-      setActive(false);
+      releaseControl(event.pointerId);
     },
-    [setActive]
+    [releaseControl]
   );
 
   return (
     <button
       type="button"
       className={`${styles.mobileControlButton} ${className || ""}`}
+      disabled={disabled}
       aria-label={label}
       onContextMenu={(event) => event.preventDefault()}
-      onPointerCancel={handlePointerUp}
+      onLostPointerCapture={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
       onPointerDown={handlePointerDown}
-      onPointerLeave={handlePointerUp}
-      onPointerUp={handlePointerUp}
+      onPointerUp={handlePointerEnd}
     >
       {label}
     </button>

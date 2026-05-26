@@ -136,6 +136,13 @@ export class NearMissGameLoop {
     this.start();
   }
 
+  cancelRun(bestScore = this.state.bestScore) {
+    this.stop();
+    this.state = this.createInitialState(bestScore);
+    this.render();
+    this.emitSnapshot();
+  }
+
   pause() {
     this.stop();
   }
@@ -191,7 +198,9 @@ export class NearMissGameLoop {
   }
 
   setInput(input: NearMissInputState) {
-    if (this.state.status === "ready") {
+    const hasActiveInput = input.steer !== 0 || input.throttle || input.brake;
+
+    if (this.state.status === "ready" && hasActiveInput) {
       this.start();
     }
 
