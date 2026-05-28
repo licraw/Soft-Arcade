@@ -392,7 +392,6 @@ a {
 
 .games-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
   gap: 24px;
   align-items: center;
   padding-bottom: 28px;
@@ -403,49 +402,9 @@ a {
   margin-bottom: 0;
 }
 
-.games-hero-badge {
-  justify-self: end;
-  width: 176px;
-  min-height: 176px;
-  display: grid;
-  place-items: center;
-  gap: 6px;
-  padding: 18px;
-  border: 1px solid rgba(125, 211, 252, 0.16);
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 50% 36%, rgba(0, 229, 255, 0.1), transparent 48%),
-    rgba(24, 26, 32, 0.48);
-  box-shadow: inset 0 0 0 1px rgba(255, 46, 209, 0.04);
-}
-
-.games-hero-badge .scrambler-mascot {
-  width: 116px;
-  height: auto;
-}
-
-.games-hero-badge span {
-  color: var(--accent-2);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.games-featured,
 .games-list-section {
   display: grid;
   gap: 16px;
-}
-
-.games-featured-card {
-  min-height: 250px;
-}
-
-.games-featured-card h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  line-height: 1;
 }
 
 .games-list-heading {
@@ -513,6 +472,11 @@ a {
   line-height: 1.55;
 }
 
+.arcade-card-list {
+  display: grid;
+  gap: 16px;
+}
+
 .featured-game-card {
   position: relative;
   display: grid;
@@ -531,6 +495,12 @@ a {
     border-color 160ms ease,
     box-shadow 160ms ease,
     transform 160ms ease;
+}
+
+.arcade-game-card-near-miss {
+  background:
+    linear-gradient(135deg, rgba(60, 255, 143, 0.08), transparent 38%),
+    linear-gradient(180deg, rgba(31, 37, 39, 0.96), rgba(17, 20, 21, 0.98));
 }
 
 .featured-game-card:hover,
@@ -555,7 +525,7 @@ a {
 
 .featured-tile-stack {
   position: absolute;
-  right: 18px;
+  left: 58px;
   bottom: 4px;
   display: grid;
   grid-template-columns: repeat(3, 32px);
@@ -581,6 +551,7 @@ a {
   margin-bottom: 8px;
 }
 
+.featured-game-card h2,
 .featured-game-card h3 {
   margin: 0;
   font-size: clamp(1.8rem, 4vw, 3rem);
@@ -635,6 +606,101 @@ a {
   color: #061016;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.near-miss-card-art {
+  position: relative;
+  width: min(178px, 52vw);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid rgba(244, 242, 238, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(13, 15, 16, 0.94), rgba(24, 28, 29, 0.98) 46%, rgba(13, 15, 16, 0.94)),
+    #101315;
+  box-shadow:
+    inset 0 0 0 1px rgba(60, 255, 143, 0.05),
+    0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+.near-miss-card-road {
+  position: absolute;
+  inset: 0;
+}
+
+.near-miss-card-road::before,
+.near-miss-card-road::after,
+.near-miss-card-road span {
+  content: "";
+  position: absolute;
+  top: -16px;
+  bottom: -16px;
+  width: 2px;
+  background: repeating-linear-gradient(180deg, rgba(244, 242, 238, 0.58) 0 16px, transparent 16px 32px);
+  opacity: 0.8;
+}
+
+.near-miss-card-road::before {
+  left: 34%;
+}
+
+.near-miss-card-road::after {
+  right: 34%;
+}
+
+.near-miss-card-road span:first-child {
+  left: 15%;
+  background: rgba(250, 204, 21, 0.74);
+}
+
+.near-miss-card-road span:last-child {
+  right: 15%;
+  background: rgba(250, 204, 21, 0.74);
+}
+
+.near-miss-card-car {
+  position: absolute;
+  width: 34px;
+  height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px 8px 5px 5px;
+  box-shadow:
+    inset 0 6px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 0 rgba(0, 0, 0, 0.16),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.near-miss-card-car::before,
+.near-miss-card-car::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(244, 242, 238, 0.72);
+}
+
+.near-miss-card-car::before {
+  top: 11px;
+}
+
+.near-miss-card-car::after {
+  bottom: 9px;
+}
+
+.near-miss-card-player {
+  left: 52%;
+  bottom: 18px;
+  background: linear-gradient(180deg, #3cff8f, #087a4a);
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.near-miss-card-traffic {
+  left: 28%;
+  top: 24px;
+  background: linear-gradient(180deg, #ff4d5a, #8e1f2e);
+  transform: rotate(4deg);
 }
 
 .daily-scramble-section {
@@ -844,14 +910,6 @@ a {
     width: fit-content;
   }
 
-  .games-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .games-hero-badge {
-    justify-self: start;
-  }
-
   .game-layout {
     grid-template-columns: 1fr;
   }
@@ -910,23 +968,12 @@ a {
   }
 
   .featured-tile-stack {
-    right: auto;
-    left: 104px;
+    left: 28px;
+    bottom: 0;
   }
 
   .featured-game-cta {
     width: 100%;
-  }
-
-  .games-hero-badge {
-    width: 100%;
-    min-height: 130px;
-    grid-template-columns: auto minmax(0, 1fr);
-    justify-content: start;
-  }
-
-  .games-hero-badge .scrambler-mascot {
-    width: 92px;
   }
 
   .game-stage {
