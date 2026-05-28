@@ -130,17 +130,28 @@
   opacity: 0.72;
 }
 
-.mobileControlRound {
-  width: 58px;
-  height: 58px;
-  border-radius: 999px;
-  font-size: 1.45rem;
-}
-
+.mobileControlSteering,
 .mobileControlPedal {
   width: 68px;
   height: 68px;
   border-radius: 8px;
+}
+
+.mobileControlSteering {
+  width: 76px;
+}
+
+.mobileSteeringIcon {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.mobileControlPedal {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
 }
@@ -627,14 +638,22 @@
     gap: 8px;
   }
 
-  .mobileControlRound {
-    width: 52px;
-    height: 52px;
-  }
-
+  .mobileControlSteering,
   .mobileControlPedal {
     width: 60px;
     height: 60px;
+  }
+
+  .mobileControlSteering {
+    width: 68px;
+  }
+
+  .mobileSteeringIcon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .mobileControlPedal {
     font-size: 0.64rem;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { NearMissGameLoop, type NearMissSnapshot } from "./engine/gameLoop";
 import { createInputController, type NearMissControl, type NearMissInputController } from "./engine/input";
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
@@ -274,6 +274,7 @@ type NearMissControlButtonProps = {
   className?: string;
   disabled: boolean;
   label: string;
+  children?: ReactNode;
   inputRef: RefObject<NearMissInputController | null>;
 };
 
@@ -281,8 +282,12 @@ function NearMissMobileControls({ inputRef, disabled }: NearMissMobileControlsPr
   return (
     <div className={styles.mobileControls} data-controls-disabled={disabled ? "true" : undefined} aria-label="Near Miss mobile controls" aria-disabled={disabled}>
       <div className={styles.mobileSteeringControls}>
-        <NearMissControlButton control="left" className={styles.mobileControlRound} disabled={disabled} label="←" inputRef={inputRef} />
-        <NearMissControlButton control="right" className={styles.mobileControlRound} disabled={disabled} label="→" inputRef={inputRef} />
+        <NearMissControlButton control="left" className={styles.mobileControlSteering} disabled={disabled} label="Steer left" inputRef={inputRef}>
+          <SteeringIcon direction="left" />
+        </NearMissControlButton>
+        <NearMissControlButton control="right" className={styles.mobileControlSteering} disabled={disabled} label="Steer right" inputRef={inputRef}>
+          <SteeringIcon direction="right" />
+        </NearMissControlButton>
       </div>
       <div className={styles.mobilePedalControls}>
         <NearMissControlButton control="brake" className={styles.mobileControlPedal} disabled={disabled} label="BRAKE" inputRef={inputRef} />
@@ -292,7 +297,7 @@ function NearMissMobileControls({ inputRef, disabled }: NearMissMobileControlsPr
   );
 }
 
-function NearMissControlButton({ control, className, disabled, label, inputRef }: NearMissControlButtonProps) {
+function NearMissControlButton({ control, className, disabled, label, children, inputRef }: NearMissControlButtonProps) {
   const activePointerIdRef = useRef<number | null>(null);
 
   const pressControl = useCallback(
@@ -370,8 +375,20 @@ function NearMissControlButton({ control, className, disabled, label, inputRef }
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerEnd}
     >
-      {label}
+      {children || label}
     </button>
+  );
+}
+
+function SteeringIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg className={styles.mobileSteeringIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {direction === "left" ? (
+        <path d="M15.5 5.5 9 12l6.5 6.5" />
+      ) : (
+        <path d="m8.5 5.5 6.5 6.5-6.5 6.5" />
+      )}
+    </svg>
   );
 }
 
