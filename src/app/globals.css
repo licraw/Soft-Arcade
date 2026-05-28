@@ -35,6 +35,9 @@ body {
 body.near-miss-mobile-play-mode {
   overflow: hidden;
   overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 a {

@@ -225,7 +225,15 @@ export function NearMissGame() {
   const mobileControlsDisabled = mobilePaused || snapshot.status !== "running";
 
   return (
-    <div className={styles.gameShell} data-game-shell="near-miss" data-mobile-play-mode={mobilePlayMode ? "true" : undefined} ref={shellRef} aria-label="Near Miss game">
+    <div
+      className={styles.gameShell}
+      data-game-shell="near-miss"
+      data-mobile-play-mode={mobilePlayMode ? "true" : undefined}
+      ref={shellRef}
+      aria-label="Near Miss game"
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
+    >
       {mobilePlayMode ? (
         <div className={styles.mobilePlayActions} aria-label="Near Miss mobile play mode controls">
           {snapshot.status === "running" ? (

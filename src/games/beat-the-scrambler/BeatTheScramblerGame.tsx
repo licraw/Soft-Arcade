@@ -53,7 +53,7 @@ export function BeatTheScramblerGame() {
   }, []);
 
   return (
-    <div className={styles.gameFrame} aria-label="Beat the Scrambler game">
+    <div className={styles.gameFrame} aria-label="Beat the Scrambler game" onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
       <div id="board">
         <div id="hud">
           <div className="hud-topline">

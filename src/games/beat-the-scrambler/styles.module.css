@@ -58,6 +58,21 @@
         radial-gradient(circle at bottom right, rgba(255, 46, 209, 0.12), transparent 25%),
         var(--bg);
     color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    overscroll-behavior: contain;
+    user-select: none;
+}
+
+.gameFrame :global(*),
+.gameFrame :global(*::before),
+.gameFrame :global(*::after) {
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .gameFrame :global(#board) {

@@ -5,6 +5,21 @@
   min-height: 0;
   overflow: hidden;
   background: #08090f;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  overscroll-behavior: contain;
+  user-select: none;
+}
+
+.gameShell *,
+.gameShell *::before,
+.gameShell *::after {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .gameFrame {
@@ -28,6 +43,7 @@
   width: 100%;
   height: 100%;
   display: block;
+  -webkit-user-drag: none;
 }
 
 .mobileControls {
