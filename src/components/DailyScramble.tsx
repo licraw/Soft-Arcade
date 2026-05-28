@@ -9,8 +9,8 @@ export function DailyScramble({ compact = false }: DailyScrambleProps) {
       {/* TODO: Add a daily leaderboard API once the scoring model is ready. */}
       {/* TODO: Define daily constraints for level, scramble count, and reset timing. */}
       <p className="eyebrow">Daily Scramble</p>
-      <h2 id={compact ? "daily-scramble-rail-title" : "daily-scramble-title"}>One shared puzzle each day.</h2>
-      <p>Best times reset tomorrow.</p>
+      <h2 id={compact ? "daily-scramble-rail-title" : "daily-scramble-title"}>Coming soon.</h2>
+      <p>One shared puzzle each day is warming up.</p>
     </section>
   );
 }

@@ -10,6 +10,8 @@ type GamePageShellProps = {
 };
 
 export function GamePageShell({ game, children }: GamePageShellProps) {
+  const showDailyScramble = game.id !== "near-miss";
+
   return (
     <main className="game-page">
       <section className="game-heading">
@@ -22,7 +24,7 @@ export function GamePageShell({ game, children }: GamePageShellProps) {
         <div className="game-stage">{children}</div>
         <aside className="game-rail" aria-label="Game side panel">
           <Leaderboard />
-          <DailyScramble compact />
+          {showDailyScramble ? <DailyScramble compact /> : null}
           <AdSlot />
         </aside>
       </section>
