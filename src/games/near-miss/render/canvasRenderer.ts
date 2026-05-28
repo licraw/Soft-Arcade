@@ -39,14 +39,15 @@ export function renderNearMiss(ctx: CanvasRenderingContext2D, state: NearMissRun
 
   for (const feedback of state.feedbacks) {
     const age = feedback.age / feedback.life;
+    const isScorePopup = feedback.variant === "score";
     ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - age);
+    ctx.globalAlpha = Math.max(0, (isScorePopup ? 0.72 : 1) - age);
     ctx.fillStyle = feedback.tone === "danger" ? "#ff4d5a" : "#facc15";
-    ctx.font = "700 18px Arial, Helvetica, sans-serif";
+    ctx.font = isScorePopup ? "700 13px Arial, Helvetica, sans-serif" : "800 16px Arial, Helvetica, sans-serif";
     ctx.textAlign = "center";
     ctx.shadowColor = feedback.tone === "danger" ? "rgba(255, 77, 90, 0.5)" : "rgba(250, 204, 21, 0.45)";
-    ctx.shadowBlur = 14;
-    ctx.fillText(feedback.text, feedback.x, feedback.y - age * 34);
+    ctx.shadowBlur = isScorePopup ? 6 : 12;
+    ctx.fillText(feedback.text, feedback.x, feedback.y - age * (isScorePopup ? 18 : 26));
     ctx.restore();
   }
 }

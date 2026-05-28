@@ -88,7 +88,12 @@ export const NEAR_MISS_TUNING = {
   // Run feedback and score glue values that are outside scoring.ts.
   missedCarComboWindowScale: 0.5,
   streakScoreStep: 40,
-  feedbackLifeSeconds: 0.92,
+  feedbackCooldownMs: 650,
+  maxActiveFeedbackMessages: 2,
+  minimumScoreForCallout: 400,
+  comboMilestoneInterval: 3,
+  messageLifetimeMs: 950,
+  scorePopupLifetimeMs: 620,
 
   // Road motion and render-only speed effects.
   stripeSpeedScale: 0.52,

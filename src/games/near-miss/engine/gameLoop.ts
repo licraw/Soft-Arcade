@@ -48,7 +48,11 @@ type Feedback = {
   age: number;
   life: number;
   tone: "bonus" | "danger";
+  priority: FeedbackPriority;
+  variant: "score" | "callout";
 };
+
+type FeedbackPriority = "low" | "medium" | "high";
 
 type PlayerCar = CarBounds & {
   lanePosition: number;
@@ -92,6 +96,7 @@ export type NearMissRuntimeState = {
   player: PlayerCar;
   traffic: TrafficCar[];
   feedbacks: Feedback[];
+  nextFeedbackAt: number;
   score: number;
   bonusScore: number;
   speed: number;
@@ -119,6 +124,11 @@ type NearMissGameLoopOptions = {
 };
 
 const READY_MESSAGE = "THREAD THE GAP";
+const FEEDBACK_PRIORITY_WEIGHT: Record<FeedbackPriority, number> = {
+  low: 1,
+  medium: 2,
+  high: 3
+};
 
 export class NearMissGameLoop {
   private canvas: HTMLCanvasElement;
@@ -287,6 +297,7 @@ export class NearMissGameLoop {
       },
       traffic: [],
       feedbacks: [],
+      nextFeedbackAt: 0,
       score: 0,
       bonusScore: 0,
       speed: TUNING.cruiseSpeed,
@@ -524,7 +535,16 @@ export class NearMissGameLoop {
     this.state.comboTimer = SCORE_TUNING.comboWindow;
     this.state.bonusScore += bonus;
     this.state.message = `${getFeedbackForStreak(this.state.streak)} +${bonus}`;
-    this.addFeedback(this.state.message, car.x + car.width / 2, Math.max(84, car.y), "bonus");
+
+    const isComboMilestone = this.state.streak > 0 && this.state.streak % TUNING.comboMilestoneInterval === 0;
+    const isMajorNearMiss = bonus >= TUNING.minimumScoreForCallout;
+
+    if (isComboMilestone || isMajorNearMiss) {
+      this.addFeedback(this.state.message, car.x + car.width / 2, "bonus", isComboMilestone ? "high" : "medium", "callout");
+      return;
+    }
+
+    this.addFeedback(`+${bonus}`, car.x + car.width / 2, "bonus", "low", "score");
   }
 
   private updateLaneSplitPressure(delta: number) {
@@ -559,7 +579,7 @@ export class NearMissGameLoop {
       this.state.comboTimer = SCORE_TUNING.comboWindow;
       this.state.laneSplitCooldown = TUNING.laneSplitCooldown;
       this.state.message = this.state.streak >= 3 ? `THREAD THE GAP +${bonus}` : `LANE SPLIT +${bonus}`;
-      this.addFeedback(this.state.message, this.state.player.x + this.state.player.width / 2, this.state.player.y - 22, "bonus");
+      this.addFeedback(this.state.message, this.state.player.x + this.state.player.width / 2, "bonus", "medium", "callout");
     }
   }
 
@@ -647,27 +667,76 @@ export class NearMissGameLoop {
 
     this.state.status = "gameOver";
     this.state.message = runEndMessage;
-    this.addFeedback(runEndMessage, this.state.player.x + this.state.player.width / 2, this.state.player.y - 8, "danger");
+    this.addFeedback(runEndMessage, this.state.player.x + this.state.player.width / 2, "danger", "high", "callout");
 
     if (this.state.score > this.state.bestScore) {
       this.state.bestScore = this.state.score;
       this.onBestScore(this.state.score);
+      this.addFeedback("NEW BEST", this.state.player.x + this.state.player.width / 2, "bonus", "high", "callout");
     }
 
     this.emitSnapshot();
   }
 
-  private addFeedback(text: string, x: number, y: number, tone: Feedback["tone"]) {
+  private addFeedback(text: string, preferredX: number, tone: Feedback["tone"], priority: FeedbackPriority, variant: Feedback["variant"]) {
+    if (!this.canShowFeedback(priority, variant)) {
+      return;
+    }
+
+    const position = this.getFeedbackPosition(preferredX, variant);
+
+    if (variant === "callout") {
+      this.state.nextFeedbackAt = this.state.elapsed + TUNING.feedbackCooldownMs / 1000;
+    }
+
     this.state.feedbacks.push({
       id: this.nextFeedbackId,
       text,
-      x,
-      y,
+      x: position.x,
+      y: position.y,
       age: 0,
-      life: TUNING.feedbackLifeSeconds,
-      tone
+      life: (variant === "callout" ? TUNING.messageLifetimeMs : TUNING.scorePopupLifetimeMs) / 1000,
+      tone,
+      priority,
+      variant
     });
+    this.trimFeedbacks();
     this.nextFeedbackId += 1;
+  }
+
+  private canShowFeedback(priority: FeedbackPriority, variant: Feedback["variant"]) {
+    const priorityWeight = FEEDBACK_PRIORITY_WEIGHT[priority];
+    const hasHigherPriorityActive = this.state.feedbacks.some((feedback) => FEEDBACK_PRIORITY_WEIGHT[feedback.priority] > priorityWeight);
+
+    if (hasHigherPriorityActive) {
+      return false;
+    }
+
+    if (variant === "callout" && priority !== "high" && this.state.elapsed < this.state.nextFeedbackAt) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private trimFeedbacks() {
+    this.state.feedbacks = [...this.state.feedbacks]
+      .sort((a, b) => FEEDBACK_PRIORITY_WEIGHT[b.priority] - FEEDBACK_PRIORITY_WEIGHT[a.priority] || a.age - b.age)
+      .slice(0, TUNING.maxActiveFeedbackMessages);
+  }
+
+  private getFeedbackPosition(preferredX: number, variant: Feedback["variant"]) {
+    const side = preferredX < this.state.laneSystem.roadLeft + this.state.laneSystem.roadWidth / 2 ? "left" : "right";
+    const sideX =
+      side === "left"
+        ? this.state.laneSystem.roadLeft + this.state.laneSystem.roadWidth * 0.18
+        : this.state.laneSystem.roadLeft + this.state.laneSystem.roadWidth * 0.82;
+    const activeOffset = Math.min(this.state.feedbacks.length, TUNING.maxActiveFeedbackMessages - 1) * 24;
+
+    return {
+      x: variant === "callout" ? clamp(sideX, 58, this.state.width - 58) : clamp(sideX, 44, this.state.width - 44),
+      y: variant === "callout" ? 108 + activeOffset : 142 + activeOffset
+    };
   }
 
   private render() {
