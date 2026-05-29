@@ -1,102 +1,68 @@
-# Tile Game Arcade
+# Soft Arcade
 
-https://tile-game-arcade.pages.dev/
+Soft Arcade is a Next.js game portal for small browser games with shared routing, layout, and leaderboard infrastructure. The app currently hosts two games:
 
-Tile Game Arcade is a browser-based sliding puzzle built with jQuery. Players choose a difficulty, solve the board using directional moves, and submit a short arcade-style name to a shared high-score table when they win.
+- `Beat the Scrambler`: a jQuery-powered sliding tile puzzle wrapped in a React component.
+- `Near Miss`: a React and canvas arcade driving game.
 
-The project uses a static frontend for the game itself and a small Cloudflare backend for leaderboard storage. Personal bests are stored locally in the browser, while the shared leaderboard is stored remotely in D1 and served through a Worker API.
-
-## Gameplay
-
-The board is a classic sliding-number puzzle. One tile space is empty, and each move slides a neighboring tile into that gap. The goal is to restore the grid to numeric order.
-
-Difficulty levels:
-
-- `Easy`: 3x3 board
-- `Medium`: 4x4 board
-- `Hard`: 5x5 board
-
-Controls:
-
-- Desktop: arrow keys
-- Mobile: swipe in the direction you want to move
-
-The game tracks:
-
-- current level
-- move count
-- elapsed time
-- local personal best per difficulty
-
-When a run is completed, the player can submit a short name to the shared leaderboard.
-
-## Interface
-
-The UI has two modes:
-
-- Desktop: full HUD with stats and action buttons visible in the top bar
-- Mobile: compact header with a collapsible game menu
-
-The top bar includes:
-
-- leaderboard
-- restart level
-- return to main menu
-
-Restarting or leaving an active run requires confirmation to avoid accidental progress loss.
-
-## Leaderboard Behavior
-
-The leaderboard is anonymous and arcade-style. There are no user accounts or sign-in flows.
-
-Each score submission includes:
-
-- player name
-- difficulty
-- move count
-- completion time
-
-Scores are ranked by:
-
-1. fewest moves
-2. fastest time
-
-The Worker applies basic validation and a small per-IP cooldown to reduce spam. It is not intended to be cheat-proof.
+The public game routes are generated from a central registry, so adding a game means adding its component and metadata under `src/games`, then registering it in `src/games/registry.ts`.
 
 ## Architecture
 
-The project is split into three parts.
+### Next.js App Router
 
-### 1. Static frontend
+The portal shell lives in `src/app`.
 
-Files:
+- `src/app/page.tsx`: home page
+- `src/app/games/page.tsx`: game library page
+- `src/app/games/[slug]/page.tsx`: generated game route
+- `src/app/globals.css`: site-wide layout, arcade theme, and responsive shell styles
 
-- `game.html`
-- `game.css`
-- `game.js`
-- `game-config.js`
-- `jquery-3.4.1.js`
+Game pages use `GamePageShell`, which provides the heading, playable stage, side rail, leaderboard, ads, and how-to-play section around each game component.
 
-Responsibilities:
+### Game Registry
 
-- render the puzzle board and UI
-- handle keyboard and swipe input
-- track timer, moves, and local personal bests
-- fetch leaderboard data
-- submit completed runs
+`src/games/registry.ts` is the source of truth for available games. Each entry defines:
 
-### 2. Cloudflare Worker API
+- stable `id`
+- route `slug`
+- title and descriptions
+- how-to-play instructions
+- implementation type
+- React component to render
 
-File:
+`generateStaticParams()` reads this registry to build all game detail pages.
 
-- `worker/src/index.js`
+### Game Modules
 
-Responsibilities:
+Each game is isolated under `src/games/<game-id>`.
 
-- expose leaderboard endpoints
-- validate incoming score submissions
-- read and write leaderboard data
-- return the top scores for a difficulty
+- `src/games/beat-the-scrambler`: legacy jQuery sliding puzzle mounted from React
+- `src/games/near-miss`: React/canvas driving game with separate engine, renderer, input, and UI modules
+- `src/games/shared`: reusable game primitives, currently shared car HUD and lane-system helpers
+
+Game-specific styles use CSS modules. Global classes are used only where a game needs stable class names across subcomponents or legacy DOM.
+
+### Shared Components
+
+`src/components` contains portal-level UI:
+
+- `GamePageShell`
+- `ArcadeGameCard`
+- `Leaderboard`
+- `DailyScramble`
+- `AdSlot`
+- header, footer, and mascot components
+
+These components should stay game-agnostic. Game behavior belongs inside `src/games`.
+
+### Leaderboard Backend
+
+The shared leaderboard backend is a Cloudflare Worker with D1 storage.
+
+- `worker/src/index.js`: Worker API
+- `worker/migrations/0001_create_scores.sql`: D1 schema
+- `wrangler.toml`: Worker and D1 binding configuration
 
 Endpoints:
 
@@ -104,28 +70,7 @@ Endpoints:
 - `GET /api/scores?level=easy|medium|hard&limit=10`
 - `POST /api/scores`
 
-Example payload:
-
-```json
-{
-  "name": "AAA",
-  "level": "medium",
-  "moves": 82,
-  "time": 64
-}
-```
-
-### 3. Cloudflare D1 database
-
-Files:
-
-- `worker/migrations/0001_create_scores.sql`
-- `wrangler.toml`
-
-Responsibilities:
-
-- persist submitted scores
-- support sorted leaderboard queries by difficulty
+The current score schema is still oriented around Beat the Scrambler's difficulty, move count, and completion time. Treat it as shared infrastructure that may need versioning before supporting games with different score models.
 
 ## Local Development
 
@@ -135,44 +80,16 @@ Install dependencies:
 npm install
 ```
 
-Serve the frontend over HTTP:
+Run the Next.js app:
 
 ```bash
-python3 -m http.server 8000
+npm run dev
 ```
 
-Then open:
-
-```text
-http://localhost:8000/game.html
-```
-
-If you open the frontend with `file://`, browser fetch behavior will be inconsistent and the leaderboard API may not work correctly.
-
-## Cloudflare Setup
-
-Authenticate Wrangler:
+Build the app:
 
 ```bash
-npx wrangler login
-```
-
-Create the D1 database:
-
-```bash
-npx wrangler d1 create tile-game-scores
-```
-
-Apply the remote migration:
-
-```bash
-npx wrangler d1 migrations apply tile-game-scores --remote
-```
-
-Apply the local migration for local Worker development:
-
-```bash
-npx wrangler d1 migrations apply tile-game-scores --local
+npm run build
 ```
 
 Run the Worker locally:
@@ -181,28 +98,36 @@ Run the Worker locally:
 npm run dev:worker
 ```
 
+Apply D1 migrations:
+
+```bash
+npm run db:migrate:local
+npm run db:migrate:remote
+```
+
+Deploy the Pages app:
+
+```bash
+npm run deploy:pages
+```
+
 Deploy the Worker:
 
 ```bash
 npm run deploy:worker
 ```
 
-If the frontend is not served from the same origin as the Worker, set the Worker URL in `game-config.js`.
+## Adding A Game
 
-## Pages Deployment
+1. Create a folder under `src/games/<game-id>`.
+2. Export the game component from `src/games/<game-id>/index.ts`.
+3. Keep game engine, renderer, UI, assets, and styles inside that folder unless they are truly reusable.
+4. Add a `GameDefinition` entry in `src/games/registry.ts`.
+5. Confirm the game works in the shared `GamePageShell` at `/games/<slug>`.
+6. Add game-specific documentation in the game folder if the implementation needs operational notes.
 
-The frontend is deployed as a static Cloudflare Pages site.
+## Deployment Notes
 
-Build the Pages bundle:
+The app is built with Next.js and deployed through Cloudflare Pages using `npm run deploy:pages`. The leaderboard API is deployed separately as a Cloudflare Worker with D1.
 
-```bash
-npm run build:pages
-```
-
-Deploy the frontend:
-
-```bash
-npm run deploy:pages
-```
-
-The Pages build copies the static client files into `pages-dist/`, including an `index.html` entrypoint for the deployed site root.
+If the frontend and Worker do not share an origin, update the game API configuration before deploying.
