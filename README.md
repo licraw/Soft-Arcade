@@ -1,6 +1,6 @@
 # Soft Arcade
 
-Soft Arcade is a Next.js game portal for small browser games with shared routing, layout, and leaderboard infrastructure. The app currently hosts two games:
+Soft Arcade is a Next.js game portal for small browser games with shared routing, layout, and game-page infrastructure. The app currently hosts two games:
 
 - `Beat the Scrambler`: a jQuery-powered sliding tile puzzle wrapped in a React component.
 - `Near Miss`: a React and canvas arcade driving game.
@@ -56,21 +56,11 @@ Game-specific styles use CSS modules. Global classes are used only where a game 
 
 These components should stay game-agnostic. Game behavior belongs inside `src/games`.
 
-### Leaderboard Backend
+### Leaderboards
 
-The shared leaderboard backend is a Cloudflare Worker with D1 storage.
+`src/components/Leaderboard.tsx` is the portal-level leaderboard surface. Persistent leaderboard storage is not yet generalized across all games.
 
-- `worker/src/index.js`: Worker API
-- `worker/migrations/0001_create_scores.sql`: D1 schema
-- `wrangler.toml`: Worker and D1 binding configuration
-
-Endpoints:
-
-- `GET /api/health`
-- `GET /api/scores?level=easy|medium|hard&limit=10`
-- `POST /api/scores`
-
-The current score schema is still oriented around Beat the Scrambler's difficulty, move count, and completion time. Treat it as shared infrastructure that may need versioning before supporting games with different score models.
+Games that need persistent scores should define their own score contract and document the backend in that game's folder.
 
 ## Local Development
 
@@ -92,31 +82,6 @@ Build the app:
 npm run build
 ```
 
-Run the Worker locally:
-
-```bash
-npm run dev:worker
-```
-
-Apply D1 migrations:
-
-```bash
-npm run db:migrate:local
-npm run db:migrate:remote
-```
-
-Deploy the Pages app:
-
-```bash
-npm run deploy:pages
-```
-
-Deploy the Worker:
-
-```bash
-npm run deploy:worker
-```
-
 ## Adding A Game
 
 1. Create a folder under `src/games/<game-id>`.
@@ -124,10 +89,4 @@ npm run deploy:worker
 3. Keep game engine, renderer, UI, assets, and styles inside that folder unless they are truly reusable.
 4. Add a `GameDefinition` entry in `src/games/registry.ts`.
 5. Confirm the game works in the shared `GamePageShell` at `/games/<slug>`.
-6. Add game-specific documentation in the game folder if the implementation needs operational notes.
-
-## Deployment Notes
-
-The app is built with Next.js and deployed through Cloudflare Pages using `npm run deploy:pages`. The leaderboard API is deployed separately as a Cloudflare Worker with D1.
-
-If the frontend and Worker do not share an origin, update the game API configuration before deploying.
+6. Add game-specific documentation in the game folder if the implementation needs operational notes, backend setup, or asset guidance.
