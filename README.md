@@ -2,8 +2,8 @@
 
 Soft Arcade is a Next.js game portal for small browser games with shared routing, layout, and game-page infrastructure. The app currently hosts two games:
 
-- `Beat the Scrambler`: a jQuery-powered sliding tile puzzle wrapped in a React component.
-- `Near Miss`: a React and canvas arcade driving game.
+- `Beat the Scrambler`: a jQuery-powered sliding tile puzzle.
+- `Near Miss`: a canvas arcade driving game.
 
 The public game routes are generated from a central registry, so adding a game means adding its component and metadata under `src/games`, then registering it in `src/games/registry.ts`.
 
