@@ -30,6 +30,7 @@ export function NearMissGame() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const loopRef = useRef<NearMissGameLoop | null>(null);
   const inputRef = useRef<NearMissInputController | null>(null);
+  const visibilityPausedRef = useRef(false);
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
   const [mobilePlayMode, setMobilePlayMode] = useState(false);
   const [mobilePaused, setMobilePaused] = useState(false);
@@ -127,6 +128,7 @@ export function NearMissGame() {
 
   const startRun = useCallback(async () => {
     clearAllInputs();
+    visibilityPausedRef.current = false;
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
     loopRef.current?.start();
@@ -138,6 +140,7 @@ export function NearMissGame() {
 
   const restartRun = useCallback(async () => {
     clearAllInputs();
+    visibilityPausedRef.current = false;
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
@@ -150,6 +153,7 @@ export function NearMissGame() {
 
   const exitRun = useCallback(() => {
     clearAllInputs();
+    visibilityPausedRef.current = false;
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
     loopRef.current?.cancelRun(bestScore);
     setMobilePaused(false);
@@ -158,12 +162,14 @@ export function NearMissGame() {
 
   const pauseRun = useCallback(() => {
     clearAllInputs();
+    visibilityPausedRef.current = false;
     loopRef.current?.pause();
     setMobilePaused(true);
   }, [clearAllInputs]);
 
   const resumeRun = useCallback(() => {
     clearAllInputs();
+    visibilityPausedRef.current = false;
     setMobilePaused(false);
     loopRef.current?.start();
   }, [clearAllInputs]);
@@ -171,6 +177,7 @@ export function NearMissGame() {
   useEffect(() => {
     if (snapshot.status !== "running") {
       clearAllInputs();
+      visibilityPausedRef.current = false;
       setMobilePaused(false);
     }
   }, [clearAllInputs, snapshot.status]);
@@ -180,9 +187,17 @@ export function NearMissGame() {
       if (document.visibilityState === "hidden") {
         clearAllInputs();
         if (snapshot.status === "running") {
+          visibilityPausedRef.current = true;
           loopRef.current?.pause();
           setMobilePaused(true);
         }
+        return;
+      }
+
+      if (visibilityPausedRef.current && snapshot.status === "running" && !isMobileLayout()) {
+        visibilityPausedRef.current = false;
+        setMobilePaused(false);
+        loopRef.current?.start();
       }
     };
 
@@ -191,7 +206,7 @@ export function NearMissGame() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [clearAllInputs, snapshot.status]);
+  }, [clearAllInputs, isMobileLayout, snapshot.status]);
 
   useEffect(() => {
     if (!mobilePlayMode) {
