@@ -317,7 +317,7 @@
 
 :global(.near-miss-modal) {
   overflow: hidden;
-  place-items: start center;
+  place-items: center;
 }
 
 .startPanel,
@@ -641,7 +641,6 @@
 
 @media (max-width: 720px) {
   :global(.near-miss-modal) {
-    place-items: center;
     padding: 8px;
   }
 
