@@ -390,10 +390,12 @@ export class NearMissGameLoop {
       this.spawnTimer = getSpawnInterval(state.speed, state.elapsed) * (TUNING.spawnJitterMin + Math.random() * TUNING.spawnJitterRange);
     }
 
-    for (const car of state.traffic) {
-      const relativeYSpeed = getTrafficScreenYSpeed(state.speed, car.trafficWorldSpeed);
-      car.y += relativeYSpeed * delta;
+    this.updateTrafficFollowing(delta);
 
+    this.moveTraffic(delta);
+
+    for (const car of state.traffic) {
+      const relativeYSpeed = getTrafficScreenYSpeed(state.speed, car.currentWorldSpeed);
       if (!car.nearMissed && hasPlayerPassedTraffic(state.player, car) && this.canAwardNearMiss(car, relativeYSpeed)) {
         this.awardNearMiss(car);
       }
@@ -430,6 +432,89 @@ export class NearMissGameLoop {
     );
   }
 
+  private updateTrafficFollowing(delta: number) {
+    const accelStep = internalSpeedFromMph(TUNING.trafficAccelMphPerSecond) * delta;
+    const brakeStep = internalSpeedFromMph(TUNING.trafficBrakeMphPerSecond) * delta;
+    const emergencyBrakeStep = internalSpeedFromMph(TUNING.trafficEmergencyBrakeMphPerSecond) * delta;
+
+    for (const car of this.state.traffic) {
+      car.blockedById = null;
+      car.followingGapPx = null;
+      car.emergencyCorrected = false;
+    }
+
+    for (const laneCars of this.getTrafficByLaneSorted()) {
+      for (let index = 0; index < laneCars.length; index += 1) {
+        const rear = laneCars[index];
+        let targetWorldSpeed = rear.desiredWorldSpeed;
+        let speedStep = targetWorldSpeed >= rear.currentWorldSpeed ? accelStep : brakeStep;
+
+        if (index > 0) {
+          const front = laneCars[index - 1];
+          const gapPx = rear.y - (front.y + front.height);
+          const baseGapPx = Math.max(TUNING.trafficFollowingGapMinPx, rear.height * TUNING.trafficFollowingGapCars);
+          const closingGapPx = Math.max(0, rear.currentWorldSpeed - front.currentWorldSpeed) * TUNING.trafficFollowingLookaheadSeconds;
+          const safeGapPx = baseGapPx + closingGapPx;
+          const deeplyCompressed = gapPx < baseGapPx * TUNING.trafficCompressionGapRatio;
+
+          rear.followingGapPx = gapPx;
+
+          if (gapPx < safeGapPx) {
+            rear.blockedById = front.id;
+            targetWorldSpeed = front.currentWorldSpeed;
+            speedStep = targetWorldSpeed >= rear.currentWorldSpeed ? accelStep : deeplyCompressed ? emergencyBrakeStep : brakeStep;
+          }
+        }
+
+        rear.currentWorldSpeed = moveToward(rear.currentWorldSpeed, targetWorldSpeed, speedStep);
+      }
+    }
+  }
+
+  private moveTraffic(delta: number) {
+    const nextYById = new Map<number, number>();
+
+    for (const car of this.state.traffic) {
+      const relativeYSpeed = getTrafficScreenYSpeed(this.state.speed, car.currentWorldSpeed);
+      nextYById.set(car.id, car.y + relativeYSpeed * delta);
+    }
+
+    for (const laneCars of this.getTrafficByLaneSorted((car) => nextYById.get(car.id) ?? car.y)) {
+      for (let index = 1; index < laneCars.length; index += 1) {
+        const front = laneCars[index - 1];
+        const rear = laneCars[index];
+        const frontY = nextYById.get(front.id) ?? front.y;
+        const rearY = nextYById.get(rear.id) ?? rear.y;
+        const minRearY = frontY + front.height + TUNING.trafficMinPhysicalGapPx;
+
+        if (rearY < minRearY) {
+          nextYById.set(rear.id, Math.max(rearY, minRearY));
+          rear.emergencyCorrected = true;
+        }
+      }
+    }
+
+    for (const car of this.state.traffic) {
+      car.y = nextYById.get(car.id) ?? car.y;
+    }
+  }
+
+  private getTrafficByLaneSorted(getY: (car: TrafficCar) => number = (car) => car.y) {
+    const lanes = new Map<number, TrafficCar[]>();
+
+    for (const car of this.state.traffic) {
+      const laneCars = lanes.get(car.lane);
+
+      if (laneCars) {
+        laneCars.push(car);
+      } else {
+        lanes.set(car.lane, [car]);
+      }
+    }
+
+    return [...lanes.values()].map((laneCars) => laneCars.sort((a, b) => getY(a) - getY(b)));
+  }
+
   private updateCrashing(delta: number) {
     const crash = this.state.crash;
 
@@ -452,7 +537,7 @@ export class NearMissGameLoop {
         continue;
       }
 
-      const relativeYSpeed = getTrafficScreenYSpeed(this.state.speed, car.trafficWorldSpeed);
+      const relativeYSpeed = getTrafficScreenYSpeed(this.state.speed, car.currentWorldSpeed);
       car.y += relativeYSpeed * delta;
     }
 
@@ -794,6 +879,14 @@ export class NearMissGameLoop {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function moveToward(value: number, target: number, maxDelta: number) {
+  if (value < target) {
+    return Math.min(target, value + maxDelta);
+  }
+
+  return Math.max(target, value - maxDelta);
 }
 
 function getTrafficScreenYSpeed(playerWorldSpeed: number, trafficWorldSpeed: number) {

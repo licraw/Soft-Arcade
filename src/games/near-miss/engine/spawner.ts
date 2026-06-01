@@ -14,7 +14,11 @@ export type TrafficCar = {
   width: number;
   height: number;
   vehicleConfigId: string;
-  trafficWorldSpeed: number;
+  desiredWorldSpeed: number;
+  currentWorldSpeed: number;
+  blockedById: number | null;
+  followingGapPx: number | null;
+  emergencyCorrected: boolean;
   paletteIndex: number;
   nearMissed: boolean;
   passed: boolean;
@@ -60,11 +64,11 @@ const TRAFFIC_PACKETS: TrafficPacket[] = [
   },
   {
     id: "staggered-triple",
-    minElapsed: 18,
+    minElapsed: 12,
     cars: [
       { laneOffset: 0, yOffset: 0, speedRatio: 0.68, lateralOffset: 0.1 },
-      { laneOffset: 1, yOffset: -2.2, speedRatio: 0.78, lateralOffset: -0.14 },
-      { laneOffset: 3, yOffset: -4.25, speedRatio: 0.73 }
+      { laneOffset: 1, yOffset: -1.5, speedRatio: 0.78, lateralOffset: -0.14 },
+      { laneOffset: 3, yOffset: -3.0, speedRatio: 0.73 }
     ]
   },
   {
@@ -82,6 +86,17 @@ const TRAFFIC_PACKETS: TrafficPacket[] = [
     cars: [
       { laneOffset: 0, yOffset: 0, speedRatio: 0.7, lateralOffset: 0.18 },
       { laneOffset: 1, yOffset: -0.95, speedRatio: 0.72, lateralOffset: -0.18 }
+    ]
+  },
+  {
+    // Covers three of four lanes with staggered-but-close blockers; the one open
+    // lane is always the current corridor. Forces an explicit lane commitment.
+    id: "close-triple",
+    minElapsed: 14,
+    cars: [
+      { laneOffset: 0, yOffset: 0, speedRatio: 0.7, lateralOffset: 0.12 },
+      { laneOffset: 3, yOffset: -0.55, speedRatio: 0.68, lateralOffset: 0.1 },
+      { laneOffset: 1, yOffset: -1.1, speedRatio: 0.72, lateralOffset: -0.14 }
     ]
   },
   {
@@ -119,7 +134,19 @@ export function spawnTrafficPacket(options: SpawnOptions) {
 
   const packet = choosePacket(elapsed);
   const corridorLane = getCorridorLane(elapsed, laneSystem.lanes);
-  const startLane = chooseStartLane(packet, availableStartLanes, laneSystem.lanes, elapsed, corridorLane);
+
+  const minSpawnGapPx = Math.max(TUNING.laneSpawnMinGapPx, TUNING.laneSpawnMinGapCars * carHeight);
+  const laneRecentEntries = buildLaneRecentEntries(traffic);
+  const stackSafeLanes = availableStartLanes.filter(
+    (startLane) => !packetWouldStack(packet, startLane, laneSystem.lanes, carHeight, laneRecentEntries, minSpawnGapPx)
+  );
+
+  if (!stackSafeLanes.length) {
+    if (TUNING.debug) console.debug("[NearMiss] spawn skipped: all lanes throttled");
+    return null;
+  }
+
+  const startLane = chooseStartLane(packet, stackSafeLanes, laneSystem.lanes, elapsed, corridorLane);
   const lanes = packet.cars.map((car) => wrapLane(startLane + car.laneOffset, laneSystem.lanes));
   const uniqueLanes = new Set(lanes);
 
@@ -145,6 +172,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
     const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
     const cruiseMph = TUNING.trafficMinCruiseMph + Math.random() * (TUNING.trafficMaxCruiseMph - TUNING.trafficMinCruiseMph);
+    const cruiseWorldSpeed = internalSpeedFromMph(cruiseMph);
 
     packetCars.push({
       id,
@@ -157,7 +185,11 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       width,
       height,
       vehicleConfigId: vehicleConfig.id,
-      trafficWorldSpeed: internalSpeedFromMph(cruiseMph),
+      desiredWorldSpeed: cruiseWorldSpeed,
+      currentWorldSpeed: cruiseWorldSpeed,
+      blockedById: null,
+      followingGapPx: null,
+      emergencyCorrected: false,
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,
       passed: false,
@@ -167,6 +199,72 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   });
 
   return packetCars;
+}
+
+type LaneEntry = { y: number; height: number };
+
+function buildLaneRecentEntries(traffic: TrafficCar[]): Map<number, LaneEntry[]> {
+  const map = new Map<number, LaneEntry[]>();
+
+  for (const car of traffic) {
+    if (car.y < 0) {
+      const entries = map.get(car.lane);
+      if (entries) {
+        entries.push({ y: car.y, height: car.height });
+      } else {
+        map.set(car.lane, [{ y: car.y, height: car.height }]);
+      }
+    }
+  }
+
+  return map;
+}
+
+function packetWouldStack(
+  packet: TrafficPacket,
+  startLane: number,
+  laneCount: number,
+  carHeight: number,
+  laneRecentEntries: Map<number, LaneEntry[]>,
+  minGapPx: number
+): boolean {
+  // Worst-case height for intra-packet upper-car estimates (truck + max height variance).
+  const maxVehicleHeight = TUNING.trafficMaxOccupancyLengthScale * (TUNING.trafficHeightRandomBase + TUNING.trafficHeightRandomRange) * carHeight;
+  const packetLaneEntries = new Map<number, LaneEntry[]>();
+
+  for (const packetCar of packet.cars) {
+    const lane = wrapLane(startLane + packetCar.laneOffset, laneCount);
+    // spawnY is the top edge of this new car. Actual spawn uses -height, but carHeight is a
+    // close proxy for sedans; trucks spawn slightly higher, making this check conservative.
+    const spawnY = -carHeight + packetCar.yOffset * carHeight;
+
+    const existingEntries = laneRecentEntries.get(lane);
+    if (existingEntries?.some((e) => wouldPhysicallyOverlap(e.y, e.height, spawnY, carHeight, minGapPx))) {
+      return true;
+    }
+
+    const siblingEntries = packetLaneEntries.get(lane);
+    if (siblingEntries?.some((e) => wouldPhysicallyOverlap(e.y, e.height, spawnY, maxVehicleHeight, minGapPx))) {
+      return true;
+    }
+
+    const entry: LaneEntry = { y: spawnY, height: maxVehicleHeight };
+    if (siblingEntries) {
+      siblingEntries.push(entry);
+    } else {
+      packetLaneEntries.set(lane, [entry]);
+    }
+  }
+
+  return false;
+}
+
+function wouldPhysicallyOverlap(aY: number, aH: number, bY: number, bH: number, minGap: number): boolean {
+  const upperY = aY <= bY ? aY : bY;
+  const upperH = aY <= bY ? aH : bH;
+  const lowerY = aY <= bY ? bY : aY;
+
+  return lowerY - (upperY + upperH) < minGap;
 }
 
 function chooseTrafficVehicleConfig() {

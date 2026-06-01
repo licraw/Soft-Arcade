@@ -184,7 +184,12 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.fillStyle = "rgba(244, 242, 238, 0.72)";
     ctx.font = "700 10px Arial, Helvetica, sans-serif";
     ctx.fillText(
-      `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg / ${car.packetId} c${car.corridorLane}`,
+      [
+        `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg`,
+        `${car.packetId} c${car.corridorLane}`,
+        `v ${formatTrafficDebugSpeed(car.currentWorldSpeed)}/${formatTrafficDebugSpeed(car.desiredWorldSpeed)}`,
+        `b ${car.blockedById ?? "-"} g ${car.followingGapPx === null ? "-" : car.followingGapPx.toFixed(0)}${car.emergencyCorrected ? " !" : ""}`
+      ].join(" / "),
       trafficBounds.x,
       Math.max(12, trafficBounds.y - 4)
     );
@@ -205,6 +210,10 @@ function getCrashAdjustedPlayer(state: NearMissRuntimeState) {
     y: state.player.y + crashMotion.offsetY,
     visualYaw: state.player.visualYaw + crashMotion.yawDeg
   };
+}
+
+function formatTrafficDebugSpeed(speed: number) {
+  return (speed / TUNING.displayedSpeedDivisor).toFixed(0);
 }
 
 function getTrafficCrashMotion(state: NearMissRuntimeState, trafficId: number) {
