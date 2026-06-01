@@ -34,23 +34,27 @@ export function createInputController(onInput: InputHandler): NearMissInputContr
   const syncInput = () => {
     const controlLeft = controlPointers.has("left");
     const controlRight = controlPointers.has("right");
-    const keyLeft = heldKeys.has("arrowleft") || heldKeys.has("a");
-    const keyRight = heldKeys.has("arrowright") || heldKeys.has("d");
+    const keyLeft = heldKeys.has("arrowleft");
+    const keyRight = heldKeys.has("arrowright");
     const left = controlLeft || (!controlRight && keyLeft);
     const right = controlRight || (!controlLeft && keyRight);
     const controlThrottle = controlPointers.has("throttle");
     const controlBrake = controlPointers.has("brake");
 
     inputState.steer = left && !right ? -1 : right && !left ? 1 : 0;
-    inputState.throttle = controlThrottle || (!controlBrake && (heldKeys.has("arrowup") || heldKeys.has("w")));
-    inputState.brake = controlBrake || (!controlThrottle && (heldKeys.has("arrowdown") || heldKeys.has("s")));
+    inputState.throttle = controlThrottle || (!controlBrake && heldKeys.has("arrowup"));
+    inputState.brake = controlBrake || (!controlThrottle && (heldKeys.has("arrowdown") || heldKeys.has(" ")));
     onInput({ ...inputState });
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
 
-    if (["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "d", "w", "s"].includes(key)) {
+    if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].includes(key)) {
       event.preventDefault();
       heldKeys.add(key);
       syncInput();
@@ -58,6 +62,10 @@ export function createInputController(onInput: InputHandler): NearMissInputContr
   };
 
   const onKeyUp = (event: KeyboardEvent) => {
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
 
     if (heldKeys.has(key)) {
@@ -106,4 +114,12 @@ export function createInputController(onInput: InputHandler): NearMissInputContr
       inputState.brake = false;
     }
   };
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
