@@ -1,4 +1,4 @@
-export function mountBeatTheScrambler() {
+export function mountBeatTheScrambler(posthog) {
   let $ = window.jQuery || window.$;
 
   if (!$) {
@@ -246,7 +246,7 @@ export function mountBeatTheScrambler() {
   }
 
   function playAgain() {
-    startGame(currentLevelName);
+    startGame(currentLevelName, true);
   }
 
   function requestWinModalClose() {
@@ -298,7 +298,7 @@ export function mountBeatTheScrambler() {
       message: "This will erase the current run and start the level over.",
       confirmLabel: "Restart",
       onConfirm: function() {
-        startGame(currentLevelName);
+        startGame(currentLevelName, true);
       }
     });
   }
@@ -781,24 +781,20 @@ export function mountBeatTheScrambler() {
       pendingSubmission = null;
       showScoreSavedState();
 
-      if (window.posthog) {
-        window.posthog.capture("score_submitted", {
-          game: "beat-the-scrambler",
-          difficulty: submittedLevel
-        });
-      }
+      posthog.capture("score_submitted", {
+        game: "beat-the-scrambler",
+        difficulty: submittedLevel
+      });
     } catch (error) {
       $("#score-name").prop("disabled", false);
       $("#submit-score-button").prop("disabled", false).text("Save Score");
       setScoreSubmitStatus(error.message || "Score submission failed.", true, false);
 
-      if (window.posthog) {
-        window.posthog.capture("score_submit_failed", {
-          game: "beat-the-scrambler",
-          difficulty: submittedLevel,
-          error: error.message || "Score submission failed."
-        });
-      }
+      posthog.capture("score_submit_failed", {
+        game: "beat-the-scrambler",
+        difficulty: submittedLevel,
+        error: error.message || "Score submission failed."
+      });
     }
 
     if (!$("#leaderboard-modal").hasClass("hidden") && submittedLevel === leaderboardViewLevel) {
@@ -1010,20 +1006,18 @@ export function mountBeatTheScrambler() {
       showWinModal();
       $("#score-name").trigger("focus");
 
-      if (window.posthog) {
-        window.posthog.capture("puzzle_solved", {
-          game: "beat-the-scrambler",
-          difficulty: currentLevelName,
-          board_size: boardSize,
-          moves: moveCount,
-          elapsed_seconds: timerSeconds,
-          is_new_best: isNewBest
-        });
-      }
+      posthog.capture("puzzle_solved", {
+        game: "beat-the-scrambler",
+        difficulty: currentLevelName,
+        board_size: boardSize,
+        moves: moveCount,
+        elapsed_seconds: timerSeconds,
+        is_new_best: isNewBest
+      });
     }
   }
 
-  function startGame(levelName) {
+  function startGame(levelName, isRestart) {
     let level = LEVELS[levelName] || LEVELS.medium;
 
     currentLevelName = LEVELS[levelName] ? levelName : "medium";
@@ -1050,8 +1044,13 @@ export function mountBeatTheScrambler() {
     refreshLeaderboard(currentLevelName);
     enterMobilePlayMode();
 
-    if (window.posthog) {
-      window.posthog.capture("game_started", {
+    if (isRestart) {
+      posthog.capture("game_restarted", {
+        game: "beat-the-scrambler",
+        difficulty: currentLevelName
+      });
+    } else {
+      posthog.capture("game_started", {
         game: "beat-the-scrambler",
         difficulty: currentLevelName,
         board_size: boardSize

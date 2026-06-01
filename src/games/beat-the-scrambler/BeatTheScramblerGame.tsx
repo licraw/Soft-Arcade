@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import posthog from "posthog-js";
 import styles from "./styles.module.css";
 
 type JQueryGlobal = {
@@ -40,7 +41,7 @@ export function BeatTheScramblerGame() {
       const { mountBeatTheScrambler } = await import("./mountBeatTheScrambler.js");
 
       if (isMounted) {
-        cleanupGame = mountBeatTheScrambler();
+        cleanupGame = mountBeatTheScrambler(posthog);
       }
     }
 
