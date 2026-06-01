@@ -315,9 +315,17 @@
   backdrop-filter: blur(8px);
 }
 
+:global(.near-miss-modal) {
+  overflow: hidden;
+  place-items: start center;
+}
+
 .startPanel,
 :global(.near-miss-modal-panel) {
   width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: 28px;
   border: 1px solid rgba(0, 229, 255, 0.22);
   border-radius: 8px;
@@ -325,7 +333,9 @@
     linear-gradient(135deg, rgba(0, 229, 255, 0.1), transparent 48%),
     rgba(18, 20, 29, 0.94);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  overscroll-behavior: contain;
   text-align: center;
+  -webkit-overflow-scrolling: touch;
 }
 
 .startPanel p,
@@ -341,22 +351,22 @@
 .startPanel h2,
 :global(.near-miss-modal-panel h2) {
   margin: 0;
-  font-size: clamp(2.1rem, 8vw, 4rem);
-  line-height: 0.95;
+  font-size: clamp(1.45rem, 5.4vw, 2.35rem);
+  line-height: 1;
 }
 
 .startPanel span,
 :global(.near-miss-modal-panel p) {
   display: block;
-  margin: 14px auto 0;
+  margin: 8px auto 0;
   color: #b8b3aa;
-  line-height: 1.55;
+  line-height: 1.32;
 }
 
 :global(.near-miss-final-score) {
   display: grid;
-  gap: 4px;
-  margin: 18px auto 0;
+  gap: 2px;
+  margin: 10px auto 0;
 }
 
 :global(.near-miss-run-end-title) {
@@ -373,16 +383,16 @@
 
 :global(.near-miss-final-score strong) {
   color: #f4f2ee;
-  font-size: clamp(2rem, 9vw, 3.6rem);
-  line-height: 0.95;
+  font-size: clamp(1.55rem, 6.5vw, 2.35rem);
+  line-height: 1;
   text-shadow: 0 0 18px rgba(0, 229, 255, 0.18);
 }
 
 :global(.near-miss-score-form) {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   width: min(100%, 280px);
-  margin: 18px auto 0;
+  margin: 10px auto 0;
 }
 
 :global(.near-miss-score-form label) {
@@ -394,7 +404,7 @@
 }
 
 :global(.near-miss-score-form input) {
-  min-height: 42px;
+  min-height: 36px;
   border: 1px solid rgba(125, 211, 252, 0.42);
   border-radius: 8px;
   background: rgba(3, 8, 12, 0.82);
@@ -423,8 +433,8 @@
 
 .startPanel button,
 :global(.near-miss-modal-panel button) {
-  min-height: 46px;
-  margin-top: 22px;
+  min-height: 38px;
+  margin-top: 10px;
   padding: 0 20px;
   border: 0;
   border-radius: 8px;
@@ -570,16 +580,16 @@
 :global(.near-miss-run-stats) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 20px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 :global(.near-miss-run-stats span) {
   display: grid;
   align-content: center;
-  gap: 5px;
-  min-height: 72px;
-  padding: 10px 8px;
+  gap: 3px;
+  min-height: 54px;
+  padding: 7px 6px;
   border: 1px solid rgba(244, 242, 238, 0.1);
   border-radius: 8px;
   background: rgba(7, 8, 13, 0.32);
@@ -591,7 +601,7 @@
 
 :global(.near-miss-run-stats small) {
   color: #b8b3aa;
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   line-height: 1.25;
@@ -600,7 +610,7 @@
 
 :global(.near-miss-run-stats strong) {
   color: #f4f2ee;
-  font-size: clamp(0.95rem, 3.2vw, 1.18rem);
+  font-size: clamp(0.82rem, 2.6vw, 1rem);
   line-height: 1.1;
 }
 
@@ -630,6 +640,93 @@
 }
 
 @media (max-width: 720px) {
+  :global(.near-miss-modal) {
+    place-items: center;
+    padding: 8px;
+  }
+
+  :global(.near-miss-modal-panel) {
+    width: 100%;
+    padding: 12px;
+  }
+
+  :global(.near-miss-modal-kicker) {
+    margin-bottom: 4px;
+    font-size: 0.64rem;
+  }
+
+  :global(.near-miss-modal-panel h2) {
+    font-size: clamp(0.95rem, 4.5vw, 1.28rem);
+    line-height: 1;
+  }
+
+  :global(.near-miss-modal-panel p) {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  :global(.near-miss-final-score) {
+    gap: 2px;
+    margin-top: 8px;
+  }
+
+  :global(.near-miss-final-score span) {
+    font-size: 0.58rem;
+  }
+
+  :global(.near-miss-final-score strong) {
+    font-size: clamp(1.2rem, 6.5vw, 1.55rem);
+  }
+
+  :global(.near-miss-run-stats) {
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  :global(.near-miss-run-stats span) {
+    min-height: 40px;
+    padding: 5px 3px;
+  }
+
+  :global(.near-miss-run-stats small) {
+    font-size: 0.48rem;
+    line-height: 1.1;
+  }
+
+  :global(.near-miss-run-stats strong) {
+    font-size: clamp(0.68rem, 2.6vw, 0.82rem);
+  }
+
+  :global(.near-miss-score-form) {
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  :global(.near-miss-score-form label) {
+    font-size: 0.58rem;
+  }
+
+  :global(.near-miss-score-form input) {
+    min-height: 30px;
+  }
+
+  :global(.near-miss-score-form p) {
+    min-height: 0;
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  :global(.near-miss-modal-panel button) {
+    min-height: 30px;
+    margin-top: 6px;
+    padding: 0 14px;
+  }
+
+  :global(.near-miss-score-form button) {
+    margin-top: 2px;
+  }
+
   .gameShell {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
@@ -702,11 +799,11 @@
   }
 
   :global(.near-miss-run-stats) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   :global(.near-miss-run-stats span) {
-    min-height: 58px;
+    min-height: 44px;
   }
 
   .mobileControls {

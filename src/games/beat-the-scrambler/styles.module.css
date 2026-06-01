@@ -162,6 +162,10 @@
         display: none;
     }
 
+    .gameFrame[data-mobile-controls="true"] :global(#hud-toggle-button) {
+        display: none;
+    }
+
     .gameFrame[data-mobile-controls="true"] :global(#hud-level-pill) {
         min-height: 36px;
         padding: 0 12px;
@@ -335,6 +339,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 14px;
+    box-sizing: border-box;
     background: rgba(5, 6, 12, 0.72);
     z-index: 10;
 }
@@ -345,7 +351,11 @@
 
 .gameFrame :global(.modal-content) {
     min-width: 280px;
+    width: min(100%, 420px);
     max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
     padding: 32px 28px;
     border: 1px solid rgba(0, 229, 255, 0.2);
     border-radius: 18px;
@@ -434,6 +444,8 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .gameFrame :global(#win-modal .modal-content h1),
@@ -1031,6 +1043,67 @@
 }
 
 @media (max-width: 720px) {
+    .gameFrame :global(.modal) {
+        align-items: flex-start;
+        padding: 8px;
+    }
+
+    .gameFrame :global(.modal-content) {
+        align-self: stretch;
+        min-width: 0;
+        width: 100%;
+        max-height: 100%;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .gameFrame :global(#win-modal .modal-content) {
+        gap: 0;
+    }
+
+    .gameFrame :global(.modal-content h1) {
+        margin-bottom: 5px;
+        font-size: 1.05rem;
+        line-height: 1;
+    }
+
+    .gameFrame :global(.modal-content p) {
+        margin-bottom: 6px;
+        font-size: 0.78rem;
+        line-height: 1.18;
+    }
+
+    .gameFrame :global(#win-best-badge) {
+        margin-bottom: 6px;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+
+    .gameFrame :global(#score-name-label) {
+        margin-bottom: 4px;
+        font-size: 0.68rem;
+    }
+
+    .gameFrame :global(#score-name) {
+        margin-bottom: 6px;
+        padding: 7px 9px;
+        border-radius: 9px;
+    }
+
+    .gameFrame :global(#submit-score-button),
+    .gameFrame :global(#play-again-button) {
+        min-height: 34px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .gameFrame :global(#win-modal-close) {
+        margin-top: 5px;
+        min-height: 32px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
     .gameFrame :global(#hud) {
         padding: 14px;
         align-items: stretch;
