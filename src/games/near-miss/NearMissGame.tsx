@@ -48,6 +48,7 @@ export function NearMissGame() {
   const inputRef = useRef<NearMissInputController | null>(null);
   const visibilityPausedRef = useRef(false);
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
+  const snapshotRef = useRef(snapshot);
   const [mobilePlayMode, setMobilePlayMode] = useState(false);
   const [mobilePaused, setMobilePaused] = useState(false);
   const [playerName, setPlayerName] = useState("");
@@ -261,24 +262,31 @@ export function NearMissGame() {
   }, [clearAllInputs, enterMobilePlayMode]);
 
   useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  useEffect(() => {
     if (snapshot.status !== "running") {
       clearAllInputs();
       visibilityPausedRef.current = false;
       setMobilePaused(false);
     }
+  }, [clearAllInputs, snapshot.status]);
 
+  useEffect(() => {
     if (snapshot.status === "gameOver") {
+      const s = snapshotRef.current;
       posthog.capture("game_over", {
         game: "near-miss",
-        score: Math.floor(snapshot.score),
-        near_misses: Math.floor(snapshot.nearMisses),
-        distance: Math.floor(snapshot.distance),
-        elapsed_seconds: Math.floor(snapshot.elapsed),
-        average_speed: Math.round(snapshot.averageSpeed),
-        is_new_best: snapshot.score > snapshot.bestScore
+        score: Math.floor(s.score),
+        near_misses: Math.floor(s.nearMisses),
+        distance: Math.floor(s.distance),
+        elapsed_seconds: Math.floor(s.elapsed),
+        average_speed: Math.round(s.averageSpeed),
+        is_new_best: s.score > s.bestScore
       });
     }
-  }, [clearAllInputs, snapshot.status, snapshot.score, snapshot.nearMisses, snapshot.distance, snapshot.elapsed, snapshot.averageSpeed, snapshot.bestScore]);
+  }, [snapshot.status]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
