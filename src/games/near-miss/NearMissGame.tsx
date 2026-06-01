@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
+import posthog from "posthog-js";
 import { NearMissGameLoop, type NearMissSnapshot } from "./engine/gameLoop";
 import { createInputController, type NearMissControl, type NearMissInputController } from "./engine/input";
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
@@ -154,6 +155,7 @@ export function NearMissGame() {
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
     loopRef.current?.start();
+    posthog.capture("game_started", { game: "near-miss" });
 
     if (!didEnterMobilePlayMode) {
       setMobilePlayMode(false);
@@ -168,6 +170,7 @@ export function NearMissGame() {
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
     loopRef.current?.restart(bestScore);
+    posthog.capture("game_restarted", { game: "near-miss" });
 
     if (!didEnterMobilePlayMode) {
       setMobilePlayMode(false);
@@ -222,10 +225,22 @@ export function NearMissGame() {
         message: "Score saved. Ready for another run?"
       });
       notifyLeaderboardUpdated(NEAR_MISS_GAME_ID);
+      posthog.capture("score_submitted", {
+        game: "near-miss",
+        score: Math.max(0, Math.floor(snapshot.score)),
+        near_misses: Math.max(0, Math.floor(snapshot.nearMisses)),
+        distance: Math.max(0, Math.floor(snapshot.distance)),
+        elapsed_seconds: Math.max(0, Math.floor(snapshot.elapsed)),
+        average_speed: Math.max(0, Math.round(snapshot.averageSpeed))
+      });
     } catch (error) {
       setScoreSubmission({
         status: "error",
         message: error instanceof Error ? error.message : "Score submission failed."
+      });
+      posthog.capture("score_submit_failed", {
+        game: "near-miss",
+        error: error instanceof Error ? error.message : "Score submission failed."
       });
     }
   }, [playerName, snapshot]);
@@ -251,7 +266,19 @@ export function NearMissGame() {
       visibilityPausedRef.current = false;
       setMobilePaused(false);
     }
-  }, [clearAllInputs, snapshot.status]);
+
+    if (snapshot.status === "gameOver") {
+      posthog.capture("game_over", {
+        game: "near-miss",
+        score: Math.floor(snapshot.score),
+        near_misses: Math.floor(snapshot.nearMisses),
+        distance: Math.floor(snapshot.distance),
+        elapsed_seconds: Math.floor(snapshot.elapsed),
+        average_speed: Math.round(snapshot.averageSpeed),
+        is_new_best: snapshot.score > snapshot.bestScore
+      });
+    }
+  }, [clearAllInputs, snapshot.status, snapshot.score, snapshot.nearMisses, snapshot.distance, snapshot.elapsed, snapshot.averageSpeed, snapshot.bestScore]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

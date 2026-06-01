@@ -8,3 +8,4 @@ pages-dist/
 .env.*
 .dev.vars
 .dev.vars.*
+.env.local
