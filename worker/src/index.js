@@ -4,6 +4,7 @@ const MAX_LIMIT = 25;
 const MIN_NAME_LENGTH = 1;
 const MAX_NAME_LENGTH = 12;
 const MIN_SUBMIT_INTERVAL_MS = 15000;
+const LEADERBOARD_PATHS = new Set(["/api/scores", "/api/near-miss/scores"]);
 
 export default {
   async fetch(request, env) {
@@ -18,6 +19,10 @@ export default {
 
     if (url.pathname === "/api/health") {
       return json({ ok: true });
+    }
+
+    if (LEADERBOARD_PATHS.has(url.pathname) && !isAuthorizedRequest(request, env)) {
+      return json({ error: "Unauthorized." }, 401);
     }
 
     if (url.pathname === "/api/scores" && request.method === "GET") {
@@ -310,9 +315,9 @@ async function getRecentSubmission(env, tableName, ipHash, cutoff) {
 
 function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://softarcadegames.com",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Authorization, Content-Type"
   };
 }
 
@@ -333,4 +338,14 @@ async function sha256Hex(input) {
   const bytes = Array.from(new Uint8Array(digest));
 
   return bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function isAuthorizedRequest(request, env) {
+  const secret = env.LEADERBOARD_WORKER_SECRET;
+
+  if (!secret) {
+    return false;
+  }
+
+  return request.headers.get("Authorization") === `Bearer ${secret}`;
 }

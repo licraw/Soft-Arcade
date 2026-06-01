@@ -1,5 +1,3 @@
-export const LEADERBOARD_API_BASE_URL = "https://tile-game-scores.ltcrawshaw.workers.dev";
-
 export type LeaderboardRow = Record<string, string | number | null | undefined>;
 
 export type LeaderboardResponse = {
@@ -7,7 +5,7 @@ export type LeaderboardResponse = {
 };
 
 export async function fetchLeaderboard(endpoint: string) {
-  const response = await fetch(`${LEADERBOARD_API_BASE_URL}${endpoint}`, {
+  const response = await fetch(endpoint, {
     cache: "no-store"
   });
 
@@ -21,7 +19,7 @@ export async function fetchLeaderboard(endpoint: string) {
 }
 
 export async function submitLeaderboardScore<TPayload extends Record<string, unknown>>(endpoint: string, payload: TPayload) {
-  const response = await fetch(`${LEADERBOARD_API_BASE_URL}${endpoint}`, {
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

@@ -9,3 +9,5 @@ pages-dist/
 .dev.vars
 .dev.vars.*
 .env.local
+!.env.example
+!.dev.vars.example
