@@ -58,9 +58,16 @@ These components should stay game-agnostic. Game behavior belongs inside `src/ga
 
 ### Leaderboards
 
-`src/components/Leaderboard.tsx` is the portal-level leaderboard surface. Persistent leaderboard storage is not yet generalized across all games.
+`src/components/Leaderboard.tsx` is the portal-level leaderboard surface. Browser clients call same-origin Next.js route handlers under `/api/...`; those route handlers proxy to the Cloudflare Worker with a server-only bearer secret.
 
-Games that need persistent scores should define their own score contract and document the backend in that game's folder.
+Required server-side environment variables:
+
+```bash
+LEADERBOARD_WORKER_URL=https://tile-game-scores.ltcrawshaw.workers.dev
+LEADERBOARD_WORKER_SECRET=<shared-secret>
+```
+
+The same `LEADERBOARD_WORKER_SECRET` must be configured on the Worker, for example with `wrangler secret put LEADERBOARD_WORKER_SECRET`. Games that need persistent scores should define their own score contract and document the backend in that game's folder.
 
 ## Local Development
 
