@@ -1,66 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { fetchLeaderboard, type LeaderboardRow } from "@/lib/leaderboards/api";
+import { getLeaderboardConfig, type ColumnDefinition, type LeaderboardConfig } from "@/lib/leaderboards/config";
 
-const API_BASE_URL = "https://tile-game-scores.ltcrawshaw.workers.dev";
-
-type Score = {
-  name: string;
-  moves: number;
-  time: number;
-  completedAt: string;
+type LeaderboardProps = {
+  gameId: string;
+  config?: LeaderboardConfig;
 };
 
-function formatTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+function normalizeRows(scores: LeaderboardRow[]) {
+  return scores.filter((score) => score && typeof score === "object" && typeof score.name === "string");
 }
 
-function normalizeScores(scores: unknown): Score[] {
-  if (!Array.isArray(scores)) {
-    return [];
+function getCellValue(row: LeaderboardRow, column: ColumnDefinition) {
+  const value = row[column.key];
+
+  if (column.format) {
+    return column.format(value, row);
   }
 
-  return scores
-    .filter((score): score is Partial<Score> & { name: string } => {
-      return !!score && typeof score === "object" && typeof (score as Score).name === "string";
-    })
-    .map((score) => ({
-      name: score.name.trim().slice(0, 12).toUpperCase(),
-      moves: Number(score.moves) || 0,
-      time: Number(score.time) || 0,
-      completedAt: score.completedAt || new Date().toISOString()
-    }));
+  return value === null || value === undefined ? "" : String(value);
 }
 
-export function Leaderboard() {
-  const [scores, setScores] = useState<Score[]>([]);
+export function Leaderboard({ gameId, config }: LeaderboardProps) {
+  const resolvedConfig = useMemo(() => config || getLeaderboardConfig(gameId), [config, gameId]);
+  const [scores, setScores] = useState<LeaderboardRow[]>([]);
   const [status, setStatus] = useState("Loading scores...");
+  const gridTemplateColumns = `24px ${resolvedConfig.columns.map((column) => (column.align === "left" ? "minmax(0, 1fr)" : "auto")).join(" ")}`;
+
+  const loadScores = useCallback(async () => {
+    try {
+      const nextScores = normalizeRows(await fetchLeaderboard(resolvedConfig.fetchEndpoint));
+
+      setScores(nextScores);
+      setStatus(nextScores.length ? "" : resolvedConfig.emptyMessage);
+    } catch (error) {
+      setStatus("Leaderboard unavailable.");
+    }
+  }, [resolvedConfig.emptyMessage, resolvedConfig.fetchEndpoint]);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadScores() {
+    async function loadMountedScores() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/scores?level=medium&limit=5`, {
-          cache: "no-store"
-        });
-
-        if (!response.ok) {
-          throw new Error("Unable to load leaderboard.");
-        }
-
-        const payload = await response.json();
-        const nextScores = normalizeScores(payload.scores);
+        const nextScores = normalizeRows(await fetchLeaderboard(resolvedConfig.fetchEndpoint));
 
         if (!isMounted) {
           return;
         }
 
         setScores(nextScores);
-        setStatus(nextScores.length ? "" : "No medium scores yet.");
+        setStatus(nextScores.length ? "" : resolvedConfig.emptyMessage);
       } catch (error) {
         if (isMounted) {
           setStatus("Leaderboard unavailable.");
@@ -68,25 +60,43 @@ export function Leaderboard() {
       }
     }
 
-    void loadScores();
+    void loadMountedScores();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [resolvedConfig.emptyMessage, resolvedConfig.fetchEndpoint]);
+
+  useEffect(() => {
+    function handleLeaderboardUpdate(event: Event) {
+      const detail = event instanceof CustomEvent ? (event.detail as { gameId?: string }) : {};
+
+      if (detail.gameId === resolvedConfig.gameId) {
+        void loadScores();
+      }
+    }
+
+    window.addEventListener("soft-arcade-leaderboard-updated", handleLeaderboardUpdate);
+
+    return () => {
+      window.removeEventListener("soft-arcade-leaderboard-updated", handleLeaderboardUpdate);
+    };
+  }, [loadScores, resolvedConfig.gameId]);
 
   return (
-    <section className="side-panel" aria-labelledby="leaderboard-title">
-      <h2 id="leaderboard-title">Leaderboard</h2>
-      <p className="leaderboard-meta">Medium 4x4</p>
+    <section className="side-panel" aria-labelledby={`${resolvedConfig.gameId}-leaderboard-title`}>
+      <h2 id={`${resolvedConfig.gameId}-leaderboard-title`}>Leaderboard</h2>
+      <p className="leaderboard-meta">{resolvedConfig.title}</p>
       {status ? <p className="leaderboard-status">{status}</p> : null}
-      <ol className="rail-leaderboard">
+      <ol className="rail-leaderboard" style={{ "--leaderboard-columns": gridTemplateColumns } as CSSProperties}>
         {scores.map((score, index) => (
-          <li key={`${score.name}-${score.moves}-${score.time}-${index}`}>
+          <li key={`${resolvedConfig.gameId}-${score.name}-${index}`}>
             <span>{index + 1}</span>
-            <span>{score.name}</span>
-            <span>{score.moves}</span>
-            <span>{formatTime(score.time)}</span>
+            {resolvedConfig.columns.map((column) => (
+              <span key={column.key} data-align={column.align || "left"}>
+                {getCellValue(score, column)}
+              </span>
+            ))}
           </li>
         ))}
       </ol>

@@ -43,9 +43,13 @@ export function mountBeatTheScrambler() {
   let touchStartX = null;
   let touchStartY = null;
   let MIN_SWIPE_DISTANCE = 24;
+  let MOBILE_PLAY_BREAKPOINT = "(max-width: 720px)";
   let SCRAMBLER_OVERLAY_MS = getScramblerOverlayDuration("medium");
   let scrambleIntroId = null;
   let scrambleIntroActive = false;
+  let mobilePlayMode = false;
+  let mobilePaused = false;
+  let mobileScrollLock = null;
   let EVENT_NAMESPACE = ".beatTheScrambler";
   let SCRAMBLER_LINES = {
     menu: [
@@ -271,6 +275,7 @@ export function mountBeatTheScrambler() {
     $("#board .tile").remove();
     resetScoreSubmissionUi();
     setHudExpanded(false);
+    exitMobilePlayMode();
     showStartMenu();
   }
 
@@ -391,6 +396,174 @@ export function mountBeatTheScrambler() {
     $("#hud").toggleClass("hud-expanded", !!isExpanded);
   }
 
+  function isMobileLayout() {
+    return window.matchMedia(MOBILE_PLAY_BREAKPOINT).matches;
+  }
+
+  function getGameShell() {
+    return $('[data-game-shell="beat-the-scrambler"]');
+  }
+
+  function focusMobileGame() {
+    let shell;
+    let shellRect;
+    let viewportPadding;
+    let bottomVisibilityBias;
+    let shellTop;
+    let viewportHeight;
+    let availableHeight;
+    let centeredTop;
+    let desiredTop;
+
+    if (!isMobileLayout()) {
+      return false;
+    }
+
+    shell = getGameShell()[0];
+
+    if (!shell) {
+      return false;
+    }
+
+    viewportPadding = 8;
+    bottomVisibilityBias = 18;
+    shellRect = shell.getBoundingClientRect();
+    shellTop = shellRect.top + window.scrollY;
+    viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    availableHeight = viewportHeight - viewportPadding * 2;
+    centeredTop = (availableHeight - shellRect.height) / 2;
+    desiredTop = shellRect.height <= availableHeight
+      ? Math.max(viewportPadding, centeredTop - bottomVisibilityBias)
+      : viewportPadding;
+
+    window.scrollTo({
+      top: Math.max(0, shellTop - desiredTop),
+      behavior: "auto"
+    });
+
+    return true;
+  }
+
+  function setMobileScrollLocked(isLocked) {
+    let body = document.body;
+    let scrollY;
+
+    if (!isLocked) {
+      if (mobileScrollLock) {
+        body.classList.remove("beat-scrambler-mobile-play-mode");
+        body.style.position = mobileScrollLock.position;
+        body.style.top = mobileScrollLock.top;
+        body.style.width = mobileScrollLock.width;
+        body.style.overflow = mobileScrollLock.overflow;
+        window.scrollTo(0, mobileScrollLock.scrollY);
+        mobileScrollLock = null;
+      }
+      return;
+    }
+
+    if (mobileScrollLock) {
+      return;
+    }
+
+    scrollY = window.scrollY;
+    mobileScrollLock = {
+      scrollY: scrollY,
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow
+    };
+    body.classList.add("beat-scrambler-mobile-play-mode");
+    body.style.position = "fixed";
+    body.style.top = "-" + scrollY + "px";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+  }
+
+  function syncMobilePlayUi() {
+    let isMobile = isMobileLayout();
+    let isActiveRun = gameStarted && !hasWon;
+    let showControls = mobilePlayMode && isMobile && isActiveRun;
+    let lockScroll = showControls && !mobilePaused;
+    let shell = getGameShell();
+
+    $("#mobile-play-actions").toggleClass("is-active", showControls);
+    $("#mobile-pause-button")
+      .text(mobilePaused ? "Resume" : "Pause")
+      .attr("aria-pressed", mobilePaused ? "true" : "false");
+
+    if (showControls) {
+      shell.attr("data-mobile-controls", "true");
+    } else {
+      shell.removeAttr("data-mobile-controls");
+    }
+
+    if (lockScroll) {
+      shell.attr("data-mobile-play-mode", "true");
+    } else {
+      shell.removeAttr("data-mobile-play-mode");
+    }
+
+    setMobileScrollLocked(lockScroll);
+  }
+
+  function enterMobilePlayMode() {
+    if (!isMobileLayout()) {
+      mobilePlayMode = false;
+      mobilePaused = false;
+      syncMobilePlayUi();
+      return false;
+    }
+
+    focusMobileGame();
+    mobilePlayMode = true;
+    mobilePaused = false;
+    syncMobilePlayUi();
+    return true;
+  }
+
+  function exitMobilePlayMode() {
+    mobilePlayMode = false;
+    mobilePaused = false;
+    touchStartX = null;
+    touchStartY = null;
+    syncMobilePlayUi();
+  }
+
+  function pauseMobileGame() {
+    if (!gameStarted || hasWon || !mobilePlayMode || mobilePaused) {
+      return;
+    }
+
+    mobilePaused = true;
+    touchStartX = null;
+    touchStartY = null;
+    stopTimer();
+    syncMobilePlayUi();
+  }
+
+  function resumeMobileGame() {
+    if (!gameStarted || hasWon || !mobilePlayMode || !mobilePaused) {
+      return;
+    }
+
+    focusMobileGame();
+    mobilePaused = false;
+    if (moveCount > 0) {
+      startTimer();
+    }
+    syncMobilePlayUi();
+  }
+
+  function toggleMobilePause() {
+    if (mobilePaused) {
+      resumeMobileGame();
+      return;
+    }
+
+    pauseMobileGame();
+  }
+
   function resetStats() {
     moveCount = 0;
     timerSeconds = 0;
@@ -399,7 +572,7 @@ export function mountBeatTheScrambler() {
   }
 
   function startTimer() {
-    if (timerId !== null) {
+    if (timerId !== null || mobilePaused) {
       return;
     }
 
@@ -818,6 +991,7 @@ export function mountBeatTheScrambler() {
       setScramblerLine("#scrambler-win-line", SCRAMBLER_LINES.win);
       showScoreEntryState();
       refreshLeaderboard(currentLevelName);
+      syncMobilePlayUi();
       showWinModal();
       $("#score-name").trigger("focus");
     }
@@ -848,6 +1022,7 @@ export function mountBeatTheScrambler() {
     scramble();
     positionTiles();
     refreshLeaderboard(currentLevelName);
+    enterMobilePlayMode();
   }
 
   function isTypingTarget(target) {
@@ -872,7 +1047,7 @@ export function mountBeatTheScrambler() {
       return;
     }
 
-    if (!gameStarted || hasWon || scrambleIntroActive) {
+    if (!gameStarted || hasWon || mobilePaused || scrambleIntroActive) {
       event.stopPropagation();
       event.preventDefault();
       return;
@@ -926,7 +1101,7 @@ export function mountBeatTheScrambler() {
   function tryMove(direction) {
     let moved = false;
 
-    if (!gameStarted || hasWon || scrambleIntroActive || !$("#confirm-modal").hasClass("hidden")) {
+    if (!gameStarted || hasWon || mobilePaused || scrambleIntroActive || !$("#confirm-modal").hasClass("hidden")) {
       return false;
     }
 
@@ -954,7 +1129,7 @@ export function mountBeatTheScrambler() {
   function handleBoardTouchStart(event) {
     let touch;
 
-    if (!gameStarted || hasWon || scrambleIntroActive || event.touches.length !== 1) {
+    if (!gameStarted || hasWon || mobilePaused || scrambleIntroActive || event.touches.length !== 1) {
       return;
     }
 
@@ -968,7 +1143,7 @@ export function mountBeatTheScrambler() {
     let deltaX;
     let deltaY;
 
-    if (touchStartX === null || touchStartY === null || !gameStarted || hasWon || scrambleIntroActive) {
+    if (touchStartX === null || touchStartY === null || !gameStarted || hasWon || mobilePaused || scrambleIntroActive) {
       touchStartX = null;
       touchStartY = null;
       return;
@@ -1009,6 +1184,8 @@ export function mountBeatTheScrambler() {
     $(".leaderboard-level-button").off(EVENT_NAMESPACE);
     $("#restart-button").off(EVENT_NAMESPACE);
     $("#main-menu-button").off(EVENT_NAMESPACE);
+    $("#mobile-pause-button").off(EVENT_NAMESPACE);
+    $("#mobile-exit-button").off(EVENT_NAMESPACE);
     $("#hud-toggle-button").off(EVENT_NAMESPACE);
     $("#confirm-cancel").off(EVENT_NAMESPACE);
     $("#confirm-accept").off(EVENT_NAMESPACE);
@@ -1020,6 +1197,7 @@ export function mountBeatTheScrambler() {
       if (gameStarted) {
         resize();
       }
+      syncMobilePlayUi();
     });
 
     $(document).on("keydown" + EVENT_NAMESPACE, keydown);
@@ -1053,6 +1231,8 @@ export function mountBeatTheScrambler() {
     });
     $("#restart-button").on("click" + EVENT_NAMESPACE, requestRestart);
     $("#main-menu-button").on("click" + EVENT_NAMESPACE, requestMainMenu);
+    $("#mobile-pause-button").on("click" + EVENT_NAMESPACE, toggleMobilePause);
+    $("#mobile-exit-button").on("click" + EVENT_NAMESPACE, requestMainMenu);
     $("#hud-toggle-button").on("click" + EVENT_NAMESPACE, function() {
       setHudExpanded(!$("#hud").hasClass("hud-expanded"));
     });
@@ -1076,6 +1256,7 @@ export function mountBeatTheScrambler() {
     });
 
     $("#board").addClass("hidden");
+    syncMobilePlayUi();
     updateHud();
     showStartMenu();
   }
@@ -1101,10 +1282,13 @@ export function mountBeatTheScrambler() {
     $(".leaderboard-level-button").off(EVENT_NAMESPACE);
     $("#restart-button").off(EVENT_NAMESPACE);
     $("#main-menu-button").off(EVENT_NAMESPACE);
+    $("#mobile-pause-button").off(EVENT_NAMESPACE);
+    $("#mobile-exit-button").off(EVENT_NAMESPACE);
     $("#hud-toggle-button").off(EVENT_NAMESPACE);
     $("#confirm-cancel").off(EVENT_NAMESPACE);
     $("#confirm-accept").off(EVENT_NAMESPACE);
     $("#confirm-modal").off(EVENT_NAMESPACE);
     $(".level-button").off(EVENT_NAMESPACE);
+    exitMobilePlayMode();
   };
 }

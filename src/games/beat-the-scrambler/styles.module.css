@@ -62,7 +62,8 @@
     -webkit-touch-callout: none;
     -webkit-user-drag: none;
     -webkit-user-select: none;
-    overscroll-behavior: contain;
+    overscroll-behavior: auto;
+    touch-action: pan-y;
     user-select: none;
 }
 
@@ -79,7 +80,28 @@
     position: relative;
     width: 100%;
     height: 100%;
+    min-height: 0;
+    touch-action: auto;
+}
+
+.gameFrame[data-mobile-play-mode="true"] :global(#board) {
     touch-action: none;
+}
+
+.gameFrame[data-mobile-play-mode="true"] {
+    overscroll-behavior: contain;
+    touch-action: none;
+}
+
+.gameFrame:not([data-mobile-play-mode="true"]) :global(#board),
+.gameFrame:not([data-mobile-play-mode="true"]) :global(.modal) {
+    touch-action: pan-y;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .gameFrame {
+        overscroll-behavior: auto;
+    }
 }
 
 .gameFrame :global(#board.hidden) {
@@ -101,6 +123,59 @@
     border-bottom: 1px solid rgba(0, 229, 255, 0.24);
     color: var(--text);
     justify-content: space-between;
+}
+
+.gameFrame :global(.mobile-play-actions) {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.gameFrame :global(.mobile-play-actions.is-active) {
+    display: flex;
+}
+
+.gameFrame :global(.mobile-play-actions button) {
+    min-height: 34px;
+    border: 1px solid rgba(234, 234, 240, 0.16);
+    border-radius: 999px;
+    padding: 7px 13px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    touch-action: manipulation;
+}
+
+@media (max-width: 720px) {
+    .gameFrame[data-mobile-controls="true"] :global(.hud-topline) {
+        gap: 8px;
+    }
+
+    .gameFrame[data-mobile-controls="true"] :global(.hud-compact-level .hud-label),
+    .gameFrame[data-mobile-controls="true"] :global(.hud-scrambler-line) {
+        display: none;
+    }
+
+    .gameFrame[data-mobile-controls="true"] :global(#hud-level-pill) {
+        min-height: 36px;
+        padding: 0 12px;
+    }
+
+    .gameFrame[data-mobile-controls="true"] :global(.mobile-play-actions) {
+        gap: 5px;
+    }
+
+    .gameFrame[data-mobile-controls="true"] :global(.mobile-play-actions button) {
+        min-height: 32px;
+        padding: 6px 10px;
+        font-size: 0.72rem;
+    }
 }
 
 .gameFrame :global(.hud-topline) {

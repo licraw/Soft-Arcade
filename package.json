@@ -14,7 +14,7 @@
     "deploy:worker": "wrangler deploy",
     "db:create": "wrangler d1 create tile-game-scores",
     "db:migrate:local": "wrangler d1 migrations apply tile-game-scores --local",
-    "db:migrate:remote": "wrangler d1 migrations apply tile-game-scores"
+    "db:migrate:remote": "wrangler d1 migrations apply tile-game-scores --remote"
   },
   "dependencies": {
     "next": "^16.2.5",

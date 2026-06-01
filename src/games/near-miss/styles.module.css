@@ -9,7 +9,8 @@
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
   -webkit-user-select: none;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
+  touch-action: pan-y;
   user-select: none;
 }
 
@@ -29,7 +30,7 @@
   min-height: 0;
   overflow: hidden;
   isolation: isolate;
-  touch-action: auto;
+  touch-action: pan-y;
   background:
     radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.16), transparent 34%),
     radial-gradient(circle at 82% 72%, rgba(255, 46, 209, 0.12), transparent 28%),
@@ -44,6 +45,7 @@
   height: 100%;
   display: block;
   -webkit-user-drag: none;
+  touch-action: pan-y;
 }
 
 .mobileControls {
@@ -76,8 +78,28 @@
   align-items: end;
 }
 
-.gameShell[data-mobile-play-mode="true"] .gameFrame {
+.gameShell[data-mobile-play-mode="true"] {
+  overscroll-behavior: contain;
   touch-action: none;
+}
+
+.gameShell[data-mobile-play-mode="true"] .gameFrame,
+.gameShell[data-mobile-play-mode="true"] .canvas {
+  touch-action: none;
+}
+
+.gameShell:not([data-mobile-play-mode="true"]) .mobileControls,
+.gameShell:not([data-mobile-play-mode="true"]) .mobileSteeringControls,
+.gameShell:not([data-mobile-play-mode="true"]) .mobilePedalControls,
+.gameShell:not([data-mobile-play-mode="true"]) .mobilePlayActions {
+  touch-action: pan-y;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gameShell,
+  .gameFrame {
+    overscroll-behavior: auto;
+  }
 }
 
 .mobilePlayActions {
@@ -356,6 +378,49 @@
   text-shadow: 0 0 18px rgba(0, 229, 255, 0.18);
 }
 
+:global(.near-miss-score-form) {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 280px);
+  margin: 18px auto 0;
+}
+
+:global(.near-miss-score-form label) {
+  color: #b8b3aa;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:global(.near-miss-score-form input) {
+  min-height: 42px;
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  border-radius: 8px;
+  background: rgba(3, 8, 12, 0.82);
+  color: #f4f2ee;
+  font: inherit;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+:global(.near-miss-score-form p) {
+  min-height: 18px;
+  margin: 0;
+  color: #b8b3aa;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+:global(.near-miss-score-form p.error) {
+  color: #fecaca;
+}
+
+:global(.near-miss-score-form p.success) {
+  color: #bbf7d0;
+}
+
 .startPanel button,
 :global(.near-miss-modal-panel button) {
   min-height: 46px;
@@ -368,6 +433,10 @@
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+:global(.near-miss-score-form button) {
+  margin-top: 4px;
 }
 
 :global(.near-miss-hud) {

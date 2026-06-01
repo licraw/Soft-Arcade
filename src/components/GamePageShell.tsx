@@ -23,7 +23,7 @@ export function GamePageShell({ game, children }: GamePageShellProps) {
       <section className="game-layout" aria-label={`${game.title} play area`}>
         <div className="game-stage">{children}</div>
         <aside className="game-rail" aria-label="Game side panel">
-          <Leaderboard />
+          <Leaderboard gameId={game.id} />
           {showDailyScramble ? <DailyScramble compact /> : null}
           <AdSlot />
         </aside>

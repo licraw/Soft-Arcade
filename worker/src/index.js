@@ -28,6 +28,14 @@ export default {
       return handlePostScore(request, env);
     }
 
+    if (url.pathname === "/api/near-miss/scores" && request.method === "GET") {
+      return handleGetNearMissScores(request, env);
+    }
+
+    if (url.pathname === "/api/near-miss/scores" && request.method === "POST") {
+      return handlePostNearMissScore(request, env);
+    }
+
     return json({ error: "Not found." }, 404);
   }
 };
@@ -127,6 +135,89 @@ async function handlePostScore(request, env) {
   });
 }
 
+async function handleGetNearMissScores(request, env) {
+  const url = new URL(request.url);
+  const limit = clampLimit(url.searchParams.get("limit"));
+
+  const { results } = await env.DB.prepare(
+    `SELECT player_name, score, distance, elapsed_seconds, near_misses, average_speed, scoring_version, created_at
+     FROM near_miss_scores
+     ORDER BY score DESC, created_at ASC
+     LIMIT ?`
+  )
+    .bind(limit)
+    .all();
+
+  return json({
+    scores: formatNearMissScores(results)
+  });
+}
+
+async function handlePostNearMissScore(request, env) {
+  let body;
+
+  try {
+    body = await request.json();
+  } catch (error) {
+    return json({ error: "Invalid JSON body." }, 400);
+  }
+
+  const name = normalizeName(body.name);
+  const score = normalizePositiveInt(body.score);
+  const distance = normalizePositiveInt(body.distance);
+  const elapsedSeconds = normalizePositiveInt(body.elapsed_seconds);
+  const nearMisses = normalizePositiveInt(body.near_misses);
+  const averageSpeed = normalizePositiveInt(body.average_speed);
+  const scoringVersion = normalizePositiveInt(body.scoring_version ?? 1);
+
+  if (!name) {
+    return json({ error: "Name must be 1-12 characters." }, 400);
+  }
+
+  if (
+    score === null ||
+    distance === null ||
+    elapsedSeconds === null ||
+    nearMisses === null ||
+    averageSpeed === null ||
+    scoringVersion === null
+  ) {
+    return json({ error: "Invalid score payload." }, 400);
+  }
+
+  const ipHash = await sha256Hex(request.headers.get("CF-Connecting-IP") || "local");
+  const now = new Date();
+  const createdAt = now.toISOString();
+  const cutoff = new Date(now.getTime() - MIN_SUBMIT_INTERVAL_MS).toISOString();
+  const recentSubmission = await getRecentSubmission(env, "near_miss_scores", ipHash, cutoff);
+
+  if (recentSubmission) {
+    return json({ error: "Please wait a few seconds before posting another score." }, 429);
+  }
+
+  await env.DB.prepare(
+    `INSERT INTO near_miss_scores
+       (player_name, score, distance, elapsed_seconds, near_misses, average_speed, scoring_version, created_at, ip_hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(name, score, distance, elapsedSeconds, nearMisses, averageSpeed, scoringVersion, createdAt, ipHash)
+    .run();
+
+  const { results } = await env.DB.prepare(
+    `SELECT player_name, score, distance, elapsed_seconds, near_misses, average_speed, scoring_version, created_at
+     FROM near_miss_scores
+     ORDER BY score DESC, created_at ASC
+     LIMIT ?`
+  )
+    .bind(DEFAULT_LIMIT)
+    .all();
+
+  return json({
+    ok: true,
+    scores: formatNearMissScores(results)
+  });
+}
+
 function normalizeLevel(level) {
   if (typeof level !== "string") {
     return null;
@@ -183,6 +274,38 @@ function formatScores(rows) {
     time: row.time_seconds,
     completedAt: row.created_at
   }));
+}
+
+function formatNearMissScores(rows) {
+  return (rows || []).map((row) => ({
+    name: row.player_name,
+    score: row.score,
+    distance: row.distance,
+    elapsedSeconds: row.elapsed_seconds,
+    nearMisses: row.near_misses,
+    averageSpeed: row.average_speed,
+    scoringVersion: row.scoring_version,
+    completedAt: row.created_at
+  }));
+}
+
+async function getRecentSubmission(env, tableName, ipHash, cutoff) {
+  const safeTables = new Set(["scores", "near_miss_scores"]);
+
+  if (!safeTables.has(tableName)) {
+    throw new Error("Invalid rate limit table.");
+  }
+
+  return env.DB.prepare(
+    `SELECT created_at
+     FROM ${tableName}
+     WHERE ip_hash = ?
+       AND created_at >= ?
+     ORDER BY created_at DESC
+     LIMIT 1`
+  )
+    .bind(ipHash, cutoff)
+    .first();
 }
 
 function corsHeaders() {

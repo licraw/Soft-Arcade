@@ -32,7 +32,8 @@ body {
   flex-direction: column;
 }
 
-body.near-miss-mobile-play-mode {
+body.near-miss-mobile-play-mode,
+body.beat-scrambler-mobile-play-mode {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-touch-callout: none;
@@ -785,12 +786,13 @@ a {
 
 .rail-leaderboard li {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto auto;
-  gap: 10px;
+  grid-template-columns: var(--leaderboard-columns, 24px minmax(0, 1fr) auto auto);
+  gap: 8px;
+  align-items: baseline;
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .rail-leaderboard li:last-child {
@@ -803,6 +805,14 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rail-leaderboard span[data-align="right"] {
+  text-align: right;
+}
+
+.rail-leaderboard span[data-align="center"] {
+  text-align: center;
 }
 
 .ad-slot {

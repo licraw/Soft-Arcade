@@ -53,7 +53,13 @@ export function BeatTheScramblerGame() {
   }, []);
 
   return (
-    <div className={styles.gameFrame} aria-label="Beat the Scrambler game" onContextMenu={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()}>
+    <div
+      className={styles.gameFrame}
+      data-game-shell="beat-the-scrambler"
+      aria-label="Beat the Scrambler game"
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
+    >
       <div id="board">
         <div id="hud">
           <div className="hud-topline">
@@ -62,6 +68,10 @@ export function BeatTheScramblerGame() {
               <span id="hud-level-pill">Medium 4x4</span>
             </div>
             <p id="scrambler-hud-line" className="scrambler-line hud-scrambler-line">Let&apos;s mix this up.</p>
+            <div id="mobile-play-actions" className="mobile-play-actions" aria-label="Beat the Scrambler mobile play controls">
+              <button id="mobile-pause-button" type="button">Pause</button>
+              <button id="mobile-exit-button" type="button">Exit</button>
+            </div>
             <button id="hud-toggle-button" className="icon-button" type="button" aria-label="Toggle game menu" title="Game menu">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 7h16M4 12h16M4 17h16"></path>
