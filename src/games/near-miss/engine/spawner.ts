@@ -64,11 +64,11 @@ const TRAFFIC_PACKETS: TrafficPacket[] = [
   },
   {
     id: "staggered-triple",
-    minElapsed: 18,
+    minElapsed: 12,
     cars: [
       { laneOffset: 0, yOffset: 0, speedRatio: 0.68, lateralOffset: 0.1 },
-      { laneOffset: 1, yOffset: -2.2, speedRatio: 0.78, lateralOffset: -0.14 },
-      { laneOffset: 3, yOffset: -4.25, speedRatio: 0.73 }
+      { laneOffset: 1, yOffset: -1.5, speedRatio: 0.78, lateralOffset: -0.14 },
+      { laneOffset: 3, yOffset: -3.0, speedRatio: 0.73 }
     ]
   },
   {
@@ -86,6 +86,17 @@ const TRAFFIC_PACKETS: TrafficPacket[] = [
     cars: [
       { laneOffset: 0, yOffset: 0, speedRatio: 0.7, lateralOffset: 0.18 },
       { laneOffset: 1, yOffset: -0.95, speedRatio: 0.72, lateralOffset: -0.18 }
+    ]
+  },
+  {
+    // Covers three of four lanes with staggered-but-close blockers; the one open
+    // lane is always the current corridor. Forces an explicit lane commitment.
+    id: "close-triple",
+    minElapsed: 14,
+    cars: [
+      { laneOffset: 0, yOffset: 0, speedRatio: 0.7, lateralOffset: 0.12 },
+      { laneOffset: 3, yOffset: -0.55, speedRatio: 0.68, lateralOffset: 0.1 },
+      { laneOffset: 1, yOffset: -1.1, speedRatio: 0.72, lateralOffset: -0.14 }
     ]
   },
   {
