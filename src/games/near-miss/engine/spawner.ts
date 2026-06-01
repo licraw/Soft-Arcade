@@ -14,7 +14,11 @@ export type TrafficCar = {
   width: number;
   height: number;
   vehicleConfigId: string;
-  trafficWorldSpeed: number;
+  desiredWorldSpeed: number;
+  currentWorldSpeed: number;
+  blockedById: number | null;
+  followingGapPx: number | null;
+  emergencyCorrected: boolean;
   paletteIndex: number;
   nearMissed: boolean;
   passed: boolean;
@@ -145,6 +149,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
     const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
     const cruiseMph = TUNING.trafficMinCruiseMph + Math.random() * (TUNING.trafficMaxCruiseMph - TUNING.trafficMinCruiseMph);
+    const cruiseWorldSpeed = internalSpeedFromMph(cruiseMph);
 
     packetCars.push({
       id,
@@ -157,7 +162,11 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       width,
       height,
       vehicleConfigId: vehicleConfig.id,
-      trafficWorldSpeed: internalSpeedFromMph(cruiseMph),
+      desiredWorldSpeed: cruiseWorldSpeed,
+      currentWorldSpeed: cruiseWorldSpeed,
+      blockedById: null,
+      followingGapPx: null,
+      emergencyCorrected: false,
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,
       passed: false,
