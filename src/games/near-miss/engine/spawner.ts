@@ -123,7 +123,19 @@ export function spawnTrafficPacket(options: SpawnOptions) {
 
   const packet = choosePacket(elapsed);
   const corridorLane = getCorridorLane(elapsed, laneSystem.lanes);
-  const startLane = chooseStartLane(packet, availableStartLanes, laneSystem.lanes, elapsed, corridorLane);
+
+  const minSpawnGapPx = Math.max(TUNING.laneSpawnMinGapPx, TUNING.laneSpawnMinGapCars * carHeight);
+  const laneRecentYs = buildLaneRecentYs(traffic);
+  const stackSafeLanes = availableStartLanes.filter(
+    (startLane) => !packetWouldStack(packet, startLane, laneSystem.lanes, carHeight, laneRecentYs, minSpawnGapPx)
+  );
+
+  if (!stackSafeLanes.length) {
+    if (TUNING.debug) console.debug("[NearMiss] spawn skipped: all lanes throttled");
+    return null;
+  }
+
+  const startLane = chooseStartLane(packet, stackSafeLanes, laneSystem.lanes, elapsed, corridorLane);
   const lanes = packet.cars.map((car) => wrapLane(startLane + car.laneOffset, laneSystem.lanes));
   const uniqueLanes = new Set(lanes);
 
@@ -176,6 +188,57 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   });
 
   return packetCars;
+}
+
+function buildLaneRecentYs(traffic: TrafficCar[]): Map<number, number[]> {
+  const map = new Map<number, number[]>();
+
+  for (const car of traffic) {
+    if (car.y < 0) {
+      const ys = map.get(car.lane);
+      if (ys) {
+        ys.push(car.y);
+      } else {
+        map.set(car.lane, [car.y]);
+      }
+    }
+  }
+
+  return map;
+}
+
+function packetWouldStack(
+  packet: TrafficPacket,
+  startLane: number,
+  laneCount: number,
+  carHeight: number,
+  laneRecentYs: Map<number, number[]>,
+  minGapPx: number
+): boolean {
+  const packetLaneYs = new Map<number, number[]>();
+
+  for (const packetCar of packet.cars) {
+    const lane = wrapLane(startLane + packetCar.laneOffset, laneCount);
+    const spawnY = -carHeight + packetCar.yOffset * carHeight;
+
+    const existingYs = laneRecentYs.get(lane);
+    if (existingYs?.some((y) => Math.abs(y - spawnY) < minGapPx)) {
+      return true;
+    }
+
+    const siblingYs = packetLaneYs.get(lane);
+    if (siblingYs?.some((y) => Math.abs(y - spawnY) < minGapPx)) {
+      return true;
+    }
+
+    if (siblingYs) {
+      siblingYs.push(spawnY);
+    } else {
+      packetLaneYs.set(lane, [spawnY]);
+    }
+  }
+
+  return false;
 }
 
 function chooseTrafficVehicleConfig() {

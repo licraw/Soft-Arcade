@@ -51,6 +51,8 @@ export const NEAR_MISS_TUNING = {
   trafficMaxPullAwayScreenSpeedMph: 12,
 
   // Traffic packet grammar. Offsets are lane-relative, y offsets are car-height-relative.
+  laneSpawnMinGapCars: 0.75,
+  laneSpawnMinGapPx: 32,
   laneOffsetAmount: 0.18,
   corridorShiftFrequency: 5.5,
   spawnBlockedLaneLookaheadCars: 2.2,
