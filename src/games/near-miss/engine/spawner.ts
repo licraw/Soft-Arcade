@@ -1,6 +1,6 @@
 import type { LaneSystem } from "@/games/shared/car/types";
 import { getLaneCenter } from "@/games/shared/car/laneSystem";
-import { getTrafficBodySize, NEAR_MISS_TUNING as TUNING } from "./tuning";
+import { getTrafficBodySize, internalSpeedFromMph, NEAR_MISS_TUNING as TUNING } from "./tuning";
 import { DEFAULT_TRAFFIC_VEHICLE_ID, getSpawnableTrafficVehicleConfigs } from "./vehicleConfig";
 
 export type TrafficCar = {
@@ -14,7 +14,7 @@ export type TrafficCar = {
   width: number;
   height: number;
   vehicleConfigId: string;
-  forwardSpeed: number;
+  trafficWorldSpeed: number;
   paletteIndex: number;
   nearMissed: boolean;
   passed: boolean;
@@ -27,7 +27,6 @@ type SpawnOptions = {
   carHeight: number;
   nextId: number;
   elapsed: number;
-  playerSpeed: number;
 };
 
 type TrafficPacketCar = {
@@ -103,7 +102,7 @@ export function getSpawnInterval(speed: number, elapsed: number) {
 }
 
 export function spawnTrafficPacket(options: SpawnOptions) {
-  const { laneSystem, traffic, carHeight, nextId, elapsed, playerSpeed } = options;
+  const { laneSystem, traffic, carHeight, nextId, elapsed } = options;
   const blockedLanes = new Set(
     traffic
       .filter((car) => car.y < carHeight * TUNING.spawnBlockedLaneLookaheadCars)
@@ -145,7 +144,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
     const height = trafficBody.height;
     const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
-    const speedVariance = TUNING.trafficSpeedRandomBase + Math.random() * TUNING.trafficSpeedRandomRange;
+    const cruiseMph = TUNING.trafficMinCruiseMph + Math.random() * (TUNING.trafficMaxCruiseMph - TUNING.trafficMinCruiseMph);
 
     packetCars.push({
       id,
@@ -158,7 +157,7 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       width,
       height,
       vehicleConfigId: vehicleConfig.id,
-      forwardSpeed: Math.max(TUNING.minTrafficForwardSpeed, playerSpeed * packetCar.speedRatio * speedVariance),
+      trafficWorldSpeed: internalSpeedFromMph(cruiseMph),
       paletteIndex: Math.floor(Math.random() * 4),
       nearMissed: false,
       passed: false,

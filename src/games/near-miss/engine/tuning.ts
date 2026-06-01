@@ -43,7 +43,12 @@ export const NEAR_MISS_TUNING = {
   carHeightRatio: 1.34,
 
   minNearMissRelativeSpeed: 62,
-  minRelativeTrafficSpeed: 28,
+  minScreenApproachSpeed: 28,
+  trafficNearSpeedDeadzoneMph: 3,
+  trafficApproachCurveScaleMph: 45,
+  trafficMaxApproachScreenSpeedMph: 70,
+  trafficPullAwayCurveScaleMph: 15,
+  trafficMaxPullAwayScreenSpeedMph: 12,
 
   // Traffic packet grammar. Offsets are lane-relative, y offsets are car-height-relative.
   laneOffsetAmount: 0.18,
@@ -61,9 +66,9 @@ export const NEAR_MISS_TUNING = {
   trafficWidthRandomRange: 0.12,
   trafficHeightRandomBase: 0.94,
   trafficHeightRandomRange: 0.12,
-  trafficSpeedRandomBase: 0.94,
-  trafficSpeedRandomRange: 0.1,
-  minTrafficForwardSpeed: 90,
+  trafficMinCruiseMph: 60,
+  trafficMaxCruiseMph: 80,
+  trafficOffscreenPullAwayScreens: 1.1,
   subtleLaneOffsetFrequency: 0.7,
   subtleLaneOffsetPhaseStep: 1.9,
   subtleLaneOffsetScale: 0.55,
@@ -188,6 +193,10 @@ export function getBaselineSpeed(elapsedSeconds: number) {
 
 export function getDisplayedSpeed(speed: number) {
   return speed / NEAR_MISS_TUNING.displayedSpeedDivisor;
+}
+
+export function internalSpeedFromMph(mph: number) {
+  return mph * NEAR_MISS_TUNING.displayedSpeedDivisor;
 }
 
 export function getDisplayedDistanceMiles(distance: number) {

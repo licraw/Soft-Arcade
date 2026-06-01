@@ -9,6 +9,7 @@ import { getSpawnInterval, spawnTrafficPacket, type TrafficCar } from "./spawner
 import {
   getBaselineSpeed,
   getDisplayedSpeed,
+  internalSpeedFromMph,
   getPlayerBodySize,
   getTrafficBodySize,
   NEAR_MISS_TUNING as TUNING
@@ -378,8 +379,7 @@ export class NearMissGameLoop {
         traffic: state.traffic,
         carHeight,
         nextId: this.nextTrafficId,
-        elapsed: state.elapsed,
-        playerSpeed: state.speed
+        elapsed: state.elapsed
       });
 
       if (spawned) {
@@ -391,7 +391,7 @@ export class NearMissGameLoop {
     }
 
     for (const car of state.traffic) {
-      const relativeYSpeed = Math.max(TUNING.minRelativeTrafficSpeed, state.speed - car.forwardSpeed);
+      const relativeYSpeed = getTrafficScreenYSpeed(state.speed, car.trafficWorldSpeed);
       car.y += relativeYSpeed * delta;
 
       if (!car.nearMissed && hasPlayerPassedTraffic(state.player, car) && this.canAwardNearMiss(car, relativeYSpeed)) {
@@ -415,7 +415,7 @@ export class NearMissGameLoop {
 
     this.updateLaneSplitPressure(delta);
 
-    state.traffic = state.traffic.filter((car) => car.y < state.height + car.height);
+    state.traffic = this.getActiveTraffic();
     state.feedbacks = state.feedbacks
       .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
       .filter((feedback) => feedback.age < feedback.life);
@@ -452,11 +452,11 @@ export class NearMissGameLoop {
         continue;
       }
 
-      const relativeYSpeed = Math.max(TUNING.minRelativeTrafficSpeed, this.state.speed - car.forwardSpeed);
+      const relativeYSpeed = getTrafficScreenYSpeed(this.state.speed, car.trafficWorldSpeed);
       car.y += relativeYSpeed * delta;
     }
 
-    this.state.traffic = this.state.traffic.filter((car) => car.y < this.state.height + car.height);
+    this.state.traffic = this.getActiveTraffic();
     this.state.feedbacks = this.state.feedbacks
       .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
       .filter((feedback) => feedback.age < feedback.life);
@@ -473,6 +473,12 @@ export class NearMissGameLoop {
     motion.velocityX *= Math.exp(-TUNING.crashLinearDamping * delta);
     motion.velocityY *= Math.exp(-TUNING.crashLinearDamping * delta);
     motion.angularVelocityDeg *= Math.exp(-TUNING.crashAngularDamping * delta);
+  }
+
+  private getActiveTraffic() {
+    const upperOffscreenLimit = -this.state.height * TUNING.trafficOffscreenPullAwayScreens;
+
+    return this.state.traffic.filter((car) => car.y < this.state.height + car.height && car.y + car.height > upperOffscreenLimit);
   }
 
   private updatePlayerHandling(delta: number) {
@@ -788,6 +794,37 @@ export class NearMissGameLoop {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function getTrafficScreenYSpeed(playerWorldSpeed: number, trafficWorldSpeed: number) {
+  const relativeSpeed = playerWorldSpeed - trafficWorldSpeed;
+  const nearSpeedDeadzone = internalSpeedFromMph(TUNING.trafficNearSpeedDeadzoneMph);
+
+  if (relativeSpeed >= 0) {
+    if (relativeSpeed <= nearSpeedDeadzone) {
+      return relativeSpeed * 0.35;
+    }
+
+    const adjustedRelativeSpeed = relativeSpeed - nearSpeedDeadzone;
+    const approachCurveScale = internalSpeedFromMph(TUNING.trafficApproachCurveScaleMph);
+    const maxApproachSpeed = internalSpeedFromMph(TUNING.trafficMaxApproachScreenSpeedMph);
+    const shapedApproachSpeed = maxApproachSpeed * (1 - Math.exp(-adjustedRelativeSpeed / approachCurveScale));
+
+    return Math.max(TUNING.minScreenApproachSpeed, Math.min(relativeSpeed, shapedApproachSpeed));
+  }
+
+  const pullAwaySpeed = Math.abs(relativeSpeed);
+
+  if (pullAwaySpeed <= nearSpeedDeadzone) {
+    return relativeSpeed * 0.25;
+  }
+
+  const adjustedPullAwaySpeed = pullAwaySpeed - nearSpeedDeadzone;
+  const pullAwayCurveScale = internalSpeedFromMph(TUNING.trafficPullAwayCurveScaleMph);
+  const maxPullAwaySpeed = internalSpeedFromMph(TUNING.trafficMaxPullAwayScreenSpeedMph);
+  const shapedPullAwaySpeed = maxPullAwaySpeed * (1 - Math.exp(-adjustedPullAwaySpeed / pullAwayCurveScale));
+
+  return -Math.min(pullAwaySpeed, shapedPullAwaySpeed);
 }
 
 function lerp(start: number, end: number, amount: number) {
