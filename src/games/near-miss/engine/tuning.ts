@@ -64,6 +64,7 @@ export const NEAR_MISS_TUNING = {
   spawnJitterMin: 0.86,
   spawnJitterRange: 0.28,
   spawnDensityBandSeconds: 12,
+  trafficMaxOccupancyLengthScale: 1.28,
   trafficWidthRandomBase: 0.9,
   trafficWidthRandomRange: 0.12,
   trafficHeightRandomBase: 0.94,

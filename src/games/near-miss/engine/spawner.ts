@@ -136,9 +136,9 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   const corridorLane = getCorridorLane(elapsed, laneSystem.lanes);
 
   const minSpawnGapPx = Math.max(TUNING.laneSpawnMinGapPx, TUNING.laneSpawnMinGapCars * carHeight);
-  const laneRecentYs = buildLaneRecentYs(traffic);
+  const laneRecentEntries = buildLaneRecentEntries(traffic);
   const stackSafeLanes = availableStartLanes.filter(
-    (startLane) => !packetWouldStack(packet, startLane, laneSystem.lanes, carHeight, laneRecentYs, minSpawnGapPx)
+    (startLane) => !packetWouldStack(packet, startLane, laneSystem.lanes, carHeight, laneRecentEntries, minSpawnGapPx)
   );
 
   if (!stackSafeLanes.length) {
@@ -201,16 +201,18 @@ export function spawnTrafficPacket(options: SpawnOptions) {
   return packetCars;
 }
 
-function buildLaneRecentYs(traffic: TrafficCar[]): Map<number, number[]> {
-  const map = new Map<number, number[]>();
+type LaneEntry = { y: number; height: number };
+
+function buildLaneRecentEntries(traffic: TrafficCar[]): Map<number, LaneEntry[]> {
+  const map = new Map<number, LaneEntry[]>();
 
   for (const car of traffic) {
     if (car.y < 0) {
-      const ys = map.get(car.lane);
-      if (ys) {
-        ys.push(car.y);
+      const entries = map.get(car.lane);
+      if (entries) {
+        entries.push({ y: car.y, height: car.height });
       } else {
-        map.set(car.lane, [car.y]);
+        map.set(car.lane, [{ y: car.y, height: car.height }]);
       }
     }
   }
@@ -223,33 +225,46 @@ function packetWouldStack(
   startLane: number,
   laneCount: number,
   carHeight: number,
-  laneRecentYs: Map<number, number[]>,
+  laneRecentEntries: Map<number, LaneEntry[]>,
   minGapPx: number
 ): boolean {
-  const packetLaneYs = new Map<number, number[]>();
+  // Worst-case height for intra-packet upper-car estimates (truck + max height variance).
+  const maxVehicleHeight = TUNING.trafficMaxOccupancyLengthScale * (TUNING.trafficHeightRandomBase + TUNING.trafficHeightRandomRange) * carHeight;
+  const packetLaneEntries = new Map<number, LaneEntry[]>();
 
   for (const packetCar of packet.cars) {
     const lane = wrapLane(startLane + packetCar.laneOffset, laneCount);
+    // spawnY is the top edge of this new car. Actual spawn uses -height, but carHeight is a
+    // close proxy for sedans; trucks spawn slightly higher, making this check conservative.
     const spawnY = -carHeight + packetCar.yOffset * carHeight;
 
-    const existingYs = laneRecentYs.get(lane);
-    if (existingYs?.some((y) => Math.abs(y - spawnY) < minGapPx)) {
+    const existingEntries = laneRecentEntries.get(lane);
+    if (existingEntries?.some((e) => wouldPhysicallyOverlap(e.y, e.height, spawnY, carHeight, minGapPx))) {
       return true;
     }
 
-    const siblingYs = packetLaneYs.get(lane);
-    if (siblingYs?.some((y) => Math.abs(y - spawnY) < minGapPx)) {
+    const siblingEntries = packetLaneEntries.get(lane);
+    if (siblingEntries?.some((e) => wouldPhysicallyOverlap(e.y, e.height, spawnY, maxVehicleHeight, minGapPx))) {
       return true;
     }
 
-    if (siblingYs) {
-      siblingYs.push(spawnY);
+    const entry: LaneEntry = { y: spawnY, height: maxVehicleHeight };
+    if (siblingEntries) {
+      siblingEntries.push(entry);
     } else {
-      packetLaneYs.set(lane, [spawnY]);
+      packetLaneEntries.set(lane, [entry]);
     }
   }
 
   return false;
+}
+
+function wouldPhysicallyOverlap(aY: number, aH: number, bY: number, bH: number, minGap: number): boolean {
+  const upperY = aY <= bY ? aY : bY;
+  const upperH = aY <= bY ? aH : bH;
+  const lowerY = aY <= bY ? bY : aY;
+
+  return lowerY - (upperY + upperH) < minGap;
 }
 
 function chooseTrafficVehicleConfig() {
