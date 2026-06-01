@@ -780,10 +780,25 @@ export function mountBeatTheScrambler() {
       leaderboardMeta[submittedLevel] = { loading: false, error: "" };
       pendingSubmission = null;
       showScoreSavedState();
+
+      if (window.posthog) {
+        window.posthog.capture("score_submitted", {
+          game: "beat-the-scrambler",
+          difficulty: submittedLevel
+        });
+      }
     } catch (error) {
       $("#score-name").prop("disabled", false);
       $("#submit-score-button").prop("disabled", false).text("Save Score");
       setScoreSubmitStatus(error.message || "Score submission failed.", true, false);
+
+      if (window.posthog) {
+        window.posthog.capture("score_submit_failed", {
+          game: "beat-the-scrambler",
+          difficulty: submittedLevel,
+          error: error.message || "Score submission failed."
+        });
+      }
     }
 
     if (!$("#leaderboard-modal").hasClass("hidden") && submittedLevel === leaderboardViewLevel) {
@@ -994,6 +1009,17 @@ export function mountBeatTheScrambler() {
       syncMobilePlayUi();
       showWinModal();
       $("#score-name").trigger("focus");
+
+      if (window.posthog) {
+        window.posthog.capture("puzzle_solved", {
+          game: "beat-the-scrambler",
+          difficulty: currentLevelName,
+          board_size: boardSize,
+          moves: moveCount,
+          elapsed_seconds: timerSeconds,
+          is_new_best: isNewBest
+        });
+      }
     }
   }
 
@@ -1023,6 +1049,14 @@ export function mountBeatTheScrambler() {
     positionTiles();
     refreshLeaderboard(currentLevelName);
     enterMobilePlayMode();
+
+    if (window.posthog) {
+      window.posthog.capture("game_started", {
+        game: "beat-the-scrambler",
+        difficulty: currentLevelName,
+        board_size: boardSize
+      });
+    }
   }
 
   function isTypingTarget(target) {
