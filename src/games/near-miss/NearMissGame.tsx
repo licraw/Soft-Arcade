@@ -7,6 +7,7 @@ import { createInputController, type NearMissControl, type NearMissInputControll
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
 import { NearMissHud } from "./ui/NearMissHud";
 import { NearMissLeaderboardScreen } from "./ui/NearMissLeaderboardScreen";
+import blueSedanSprite from "./ui/blue-sedan.svg";
 import redCarSprite from "./ui/redcar.svg";
 import { getArcadeName, setArcadeName } from "@/lib/arcadeName";
 import { notifyLeaderboardUpdated, submitLeaderboardScore } from "@/lib/leaderboards/api";
@@ -488,6 +489,10 @@ export function NearMissGame() {
               <h2 className={styles.startTitle}>Near Miss</h2>
               <span className={styles.startTagline}>Steer through traffic. Brake late. Chase clean close calls.</span>
               <div className={styles.scgMascot} aria-hidden="true">
+                <div className={styles.scgRoad}>
+                  <div className={styles.scgLaneTrack}></div>
+                </div>
+                <img src={blueSedanSprite.src} alt="" className={styles.scgTrafficCar} />
                 <img src={redCarSprite.src} alt="" className={styles.scgCar} />
                 <div className={styles.scgShadow}></div>
               </div>
