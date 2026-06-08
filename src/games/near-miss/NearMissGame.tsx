@@ -6,9 +6,12 @@ import { NearMissGameLoop, type NearMissSnapshot } from "./engine/gameLoop";
 import { createInputController, type NearMissControl, type NearMissInputController } from "./engine/input";
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
 import { NearMissHud } from "./ui/NearMissHud";
+import { NearMissLeaderboardScreen } from "./ui/NearMissLeaderboardScreen";
+import redCarSprite from "./ui/redcar.svg";
+import { getArcadeName, setArcadeName } from "@/lib/arcadeName";
 import { notifyLeaderboardUpdated, submitLeaderboardScore } from "@/lib/leaderboards/api";
 import { getLeaderboardConfig } from "@/lib/leaderboards/config";
-import { loadStoredPlayerName, saveStoredPlayerName, sanitizePlayerName } from "@/lib/leaderboards/scoreNames";
+import { sanitizePlayerName } from "@/lib/leaderboards/scoreNames";
 import styles from "./styles.module.css";
 
 const BEST_SCORE_KEY = "soft-arcade-near-miss-best-score";
@@ -37,7 +40,7 @@ type ScoreSubmissionState = {
 
 const initialScoreSubmission: ScoreSubmissionState = {
   status: "idle",
-  message: "Enter a name to save your score."
+  message: "Enter a name to save your first score."
 };
 
 export function NearMissGame() {
@@ -49,9 +52,14 @@ export function NearMissGame() {
   const visibilityPausedRef = useRef(false);
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
   const snapshotRef = useRef(snapshot);
+  const runIdRef = useRef(0);
+  const runBestAtStartRef = useRef(0);
+  const submittedRunIdRef = useRef<number | null>(null);
   const [mobilePlayMode, setMobilePlayMode] = useState(false);
   const [mobilePaused, setMobilePaused] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [nameEntryOpen, setNameEntryOpen] = useState(false);
   const [scoreSubmission, setScoreSubmission] = useState<ScoreSubmissionState>(initialScoreSubmission);
 
   const persistBestScore = useCallback((score: number) => {
@@ -67,6 +75,7 @@ export function NearMissGame() {
     }
 
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    runBestAtStartRef.current = bestScore;
     const loop = new NearMissGameLoop({
       canvas,
       bestScore,
@@ -94,7 +103,7 @@ export function NearMissGame() {
   }, [persistBestScore]);
 
   useEffect(() => {
-    setPlayerName(loadStoredPlayerName());
+    setPlayerName(getArcadeName());
   }, []);
 
   const clearAllInputs = useCallback(() => {
@@ -150,8 +159,16 @@ export function NearMissGame() {
   }, [focusMobileGame]);
 
   const startRun = useCallback(async () => {
+    const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+
     clearAllInputs();
     visibilityPausedRef.current = false;
+    runIdRef.current += 1;
+    runBestAtStartRef.current = bestScore;
+    submittedRunIdRef.current = null;
+    setLeaderboardOpen(false);
+    setPlayerName(getArcadeName());
+    setNameEntryOpen(false);
     setScoreSubmission(initialScoreSubmission);
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
@@ -166,11 +183,18 @@ export function NearMissGame() {
   const restartRun = useCallback(async () => {
     clearAllInputs();
     visibilityPausedRef.current = false;
+    runIdRef.current += 1;
+    submittedRunIdRef.current = null;
+    setPlayerName(getArcadeName());
+    setNameEntryOpen(false);
+    setLeaderboardOpen(false);
     setScoreSubmission(initialScoreSubmission);
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    runBestAtStartRef.current = bestScore;
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
     loopRef.current?.restart(bestScore);
+    posthog.capture("play_again_clicked", { game: "near-miss" });
     posthog.capture("game_restarted", { game: "near-miss" });
 
     if (!didEnterMobilePlayMode) {
@@ -181,6 +205,9 @@ export function NearMissGame() {
   const exitRun = useCallback(() => {
     clearAllInputs();
     visibilityPausedRef.current = false;
+    submittedRunIdRef.current = null;
+    setNameEntryOpen(false);
+    setLeaderboardOpen(false);
     setScoreSubmission(initialScoreSubmission);
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
     loopRef.current?.cancelRun(bestScore);
@@ -188,15 +215,21 @@ export function NearMissGame() {
     setMobilePlayMode(false);
   }, [clearAllInputs]);
 
-  const submitNearMissScore = useCallback(async () => {
-    const sanitizedName = sanitizePlayerName(playerName);
+  const submitNearMissScore = useCallback(async (nameOverride?: string) => {
+    const activeRunId = runIdRef.current;
+    const sanitizedName = sanitizePlayerName(nameOverride ?? playerName);
     const submitEndpoint = getLeaderboardConfig(NEAR_MISS_GAME_ID).submitEndpoint;
 
     if (!submitEndpoint || snapshot.status !== "gameOver") {
       return;
     }
 
+    if (submittedRunIdRef.current === activeRunId) {
+      return;
+    }
+
     if (!sanitizedName) {
+      setNameEntryOpen(true);
       setScoreSubmission({
         status: "error",
         message: "Enter a name with at least 1 character."
@@ -204,12 +237,15 @@ export function NearMissGame() {
       return;
     }
 
+    submittedRunIdRef.current = activeRunId;
     setPlayerName(sanitizedName);
-    saveStoredPlayerName(sanitizedName);
+    setArcadeName(sanitizedName);
+    setNameEntryOpen(false);
     setScoreSubmission({
       status: "saving",
       message: "Saving score..."
     });
+    posthog.capture("score_auto_save_started", { game: "near-miss" });
 
     try {
       await submitLeaderboardScore(submitEndpoint, {
@@ -223,9 +259,10 @@ export function NearMissGame() {
       });
       setScoreSubmission({
         status: "saved",
-        message: "Score saved. Ready for another run?"
+        message: `Saved as ${sanitizedName}`
       });
       notifyLeaderboardUpdated(NEAR_MISS_GAME_ID);
+      posthog.capture("score_auto_save_success", { game: "near-miss" });
       posthog.capture("score_submitted", {
         game: "near-miss",
         score: Math.max(0, Math.floor(snapshot.score)),
@@ -237,7 +274,11 @@ export function NearMissGame() {
     } catch (error) {
       setScoreSubmission({
         status: "error",
-        message: error instanceof Error ? error.message : "Score submission failed."
+        message: "Score could not be saved."
+      });
+      posthog.capture("score_auto_save_failed", {
+        game: "near-miss",
+        error: error instanceof Error ? error.message : "Score submission failed."
       });
       posthog.capture("score_submit_failed", {
         game: "near-miss",
@@ -245,6 +286,63 @@ export function NearMissGame() {
       });
     }
   }, [playerName, snapshot]);
+
+  useEffect(() => {
+    if (snapshot.status !== "gameOver") {
+      return;
+    }
+
+    const savedName = getArcadeName();
+
+    if (!savedName) {
+      setNameEntryOpen(true);
+      setScoreSubmission({
+        status: "idle",
+        message: "Enter a name to save your first score."
+      });
+      return;
+    }
+
+    setPlayerName(savedName);
+    setNameEntryOpen(false);
+    void submitNearMissScore(savedName);
+  }, [snapshot.status, submitNearMissScore]);
+
+  const changeArcadeName = useCallback(() => {
+    setPlayerName(getArcadeName());
+    setNameEntryOpen(true);
+    setScoreSubmission((current) => ({
+      ...current,
+      message: current.status === "saved" ? current.message : "Enter a name to save your score."
+    }));
+  }, []);
+
+  const saveArcadeNameChange = useCallback(() => {
+    const sanitizedName = sanitizePlayerName(playerName);
+
+    if (!sanitizedName) {
+      setScoreSubmission({
+        status: "error",
+        message: "Enter a name with at least 1 character."
+      });
+      return;
+    }
+
+    setPlayerName(sanitizedName);
+    setArcadeName(sanitizedName);
+    posthog.capture("arcade_name_set", { game: "near-miss" });
+
+    if (snapshot.status === "gameOver" && submittedRunIdRef.current !== runIdRef.current) {
+      void submitNearMissScore(sanitizedName);
+      return;
+    }
+
+    setNameEntryOpen(false);
+    setScoreSubmission((current) => ({
+      ...current,
+      message: current.status === "saved" ? `Saved as ${sanitizedName}` : `Arcade name saved as ${sanitizedName}.`
+    }));
+  }, [playerName, snapshot.status, submitNearMissScore]);
 
   const pauseRun = useCallback(() => {
     clearAllInputs();
@@ -260,6 +358,16 @@ export function NearMissGame() {
     setMobilePaused(false);
     loopRef.current?.start();
   }, [clearAllInputs, enterMobilePlayMode]);
+
+  const openLeaderboard = useCallback(() => {
+    setLeaderboardOpen(true);
+    clearAllInputs();
+    posthog.capture("leaderboard_opened", { game: "near-miss" });
+  }, [clearAllInputs]);
+
+  const closeLeaderboard = useCallback(() => {
+    setLeaderboardOpen(false);
+  }, []);
 
   useEffect(() => {
     snapshotRef.current = snapshot;
@@ -342,7 +450,7 @@ export function NearMissGame() {
     };
   }, [mobilePaused, mobilePlayMode, snapshot.status]);
 
-  const reserveMobileControls = mobilePlayMode && snapshot.status !== "ready";
+  const reserveMobileControls = mobilePlayMode && snapshot.status !== "ready" && !leaderboardOpen;
   const mobileControlsDisabled = mobilePaused || snapshot.status !== "running";
   const mobileScrollLocked = mobilePlayMode && !mobilePaused && snapshot.status === "running";
 
@@ -356,7 +464,7 @@ export function NearMissGame() {
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
     >
-      {mobilePlayMode ? (
+      {mobilePlayMode && !leaderboardOpen ? (
         <div className={styles.mobilePlayActions} aria-label="Near Miss mobile play mode controls">
           {snapshot.status === "running" ? (
             <button type="button" onClick={mobilePaused ? resumeRun : pauseRun}>
@@ -376,25 +484,40 @@ export function NearMissGame() {
         {snapshot.status === "ready" ? (
           <div className={styles.startOverlay}>
             <div className={styles.startPanel}>
-              <p>Soft Arcade</p>
-              <h2>Near Miss</h2>
-              <span>Steer through traffic. Brake late. Chase clean close calls.</span>
-              <button type="button" onClick={startRun}>
+              <p className={styles.startKicker}>Soft Arcade</p>
+              <h2 className={styles.startTitle}>Near Miss</h2>
+              <span className={styles.startTagline}>Steer through traffic. Brake late. Chase clean close calls.</span>
+              <div className={styles.scgMascot} aria-hidden="true">
+                <img src={redCarSprite.src} alt="" className={styles.scgCar} />
+                <div className={styles.scgShadow}></div>
+              </div>
+              <button type="button" className={styles.startRunButton} onClick={startRun}>
                 Start Run
+              </button>
+              <button type="button" className={styles.startLeaderboardButton} onClick={openLeaderboard}>
+                Leaderboard
               </button>
             </div>
           </div>
         ) : null}
 
+        {leaderboardOpen ? <NearMissLeaderboardScreen onBack={closeLeaderboard} /> : null}
+
         {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
-        {snapshot.status === "gameOver" && !snapshot.debug ? (
+        {snapshot.status === "gameOver" && !snapshot.debug && !leaderboardOpen ? (
           <NearMissGameOverModal
             playerName={playerName}
             scoreSubmission={scoreSubmission}
             snapshot={snapshot}
+            bestScore={Math.max(snapshot.bestScore, runBestAtStartRef.current)}
+            isNewBest={snapshot.score > runBestAtStartRef.current}
             onPlayerNameChange={setPlayerName}
             onRestart={restartRun}
-            onSubmitScore={submitNearMissScore}
+            onBackToMenu={exitRun}
+            onChangeName={changeArcadeName}
+            onLeaderboard={openLeaderboard}
+            onSubmitScore={saveArcadeNameChange}
+            showNameEntry={nameEntryOpen}
           />
         ) : null}
       </div>

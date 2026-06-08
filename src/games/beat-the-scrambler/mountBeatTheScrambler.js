@@ -1,3 +1,5 @@
+import { getArcadeName, normalizeArcadeName, setArcadeName } from "@/lib/arcadeName";
+
 export function mountBeatTheScrambler(posthog) {
   let $ = window.jQuery || window.$;
 
@@ -8,7 +10,6 @@ export function mountBeatTheScrambler(posthog) {
   let utils = window.TileGameUtils;
   let TILE_GAP = 4;
   let STORAGE_KEY = "tileGamePersonalBests";
-  let PLAYER_NAME_STORAGE_KEY = "tileGameLastPlayerName";
   let LEVELS = {
     easy: { size: 3, scrambleMoves: 12, label: "Easy 3x3" },
     medium: { size: 4, scrambleMoves: 100, label: "Medium 4x4" },
@@ -39,6 +40,7 @@ export function mountBeatTheScrambler(posthog) {
   let leaderboardRequestId = 0;
   let leaderboardViewLevel = "medium";
   let pendingSubmission = null;
+  let scoreRunId = 0;
   let confirmAction = null;
   let touchStartX = null;
   let touchStartY = null;
@@ -238,11 +240,35 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function showScoreEntryState() {
-    $("#score-name").val(loadLastPlayerName()).prop("disabled", false);
+    let arcadeName = loadLastPlayerName();
+
     $("#win-modal").removeClass("is-score-saved");
-    $("#submit-score-button").removeClass("hidden").prop("disabled", false).text("Save Score");
-    $("#play-again-button").addClass("hidden");
-    setScoreSubmitStatus("Enter a name to save your score.", false, false);
+
+    if (pendingSubmission && arcadeName) {
+      showAutoSaveState(arcadeName);
+      submitScore(arcadeName);
+      return;
+    }
+
+    showNamePromptState("Enter a name to save your first score.", false);
+  }
+
+  function showNamePromptState(message, isError) {
+    $("#score-name-label").removeClass("hidden");
+    $("#score-name").removeClass("hidden").val(loadLastPlayerName()).prop("disabled", false);
+    $("#submit-score-button").removeClass("hidden").prop("disabled", false).text(pendingSubmission ? "Save Score" : "Save Name");
+    $("#change-name-button").addClass("hidden").prop("disabled", false);
+    $("#play-again-button").removeClass("hidden");
+    setScoreSubmitStatus(message || "Enter a name to save your score.", !!isError, false);
+  }
+
+  function showAutoSaveState(playerName) {
+    $("#score-name-label").addClass("hidden");
+    $("#score-name").addClass("hidden").val(playerName).prop("disabled", true);
+    $("#submit-score-button").addClass("hidden").prop("disabled", true).text("Saving...");
+    $("#change-name-button").removeClass("hidden").prop("disabled", true);
+    $("#play-again-button").removeClass("hidden");
+    setScoreSubmitStatus("Saving score...", false, false);
   }
 
   function playAgain() {
@@ -250,7 +276,7 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function requestWinModalClose() {
-    if (!pendingSubmission) {
+    if (!pendingSubmission || pendingSubmission.submissionStarted) {
       returnToMainMenu();
       return;
     }
@@ -344,11 +370,11 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function loadLastPlayerName() {
-    return sanitizePlayerName(localStorage.getItem(PLAYER_NAME_STORAGE_KEY));
+    return getArcadeName();
   }
 
   function saveLastPlayerName(playerName) {
-    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, sanitizePlayerName(playerName));
+    return setArcadeName(playerName);
   }
 
   function persistScoreNameInput() {
@@ -590,7 +616,9 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function updateWinStats() {
-    $("#win-stats").text("Time: " + formatTime(timerSeconds) + " | Moves: " + moveCount);
+    $("#win-stat-time").text(formatTime(timerSeconds));
+    $("#win-stat-moves").text(moveCount);
+    $("#win-stat-difficulty").text(LEVELS[currentLevelName].label.replace(/\s+\d+x\d+$/, ""));
   }
 
   function setScoreSubmitStatus(message, isError, isSuccess) {
@@ -601,12 +629,26 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function showScoreSavedState() {
+    let playerName = loadLastPlayerName();
+
     $("#win-modal").addClass("is-score-saved");
-    $("#score-name").prop("disabled", true);
+    $("#score-name-label").addClass("hidden");
+    $("#score-name").addClass("hidden").val(playerName).prop("disabled", true);
     $("#submit-score-button").addClass("hidden").prop("disabled", true).text("Saved");
+    $("#change-name-button").removeClass("hidden").prop("disabled", false);
     $("#play-again-button").removeClass("hidden");
-    setScoreSubmitStatus("Score saved. Ready for another run?", false, true);
+    setScoreSubmitStatus(playerName ? "Saved as " + playerName : "Score saved", false, true);
     $("#play-again-button").trigger("focus");
+  }
+
+  function showScoreFailedState() {
+    $("#win-modal").removeClass("is-score-saved");
+    $("#score-name-label").addClass("hidden");
+    $("#score-name").addClass("hidden").prop("disabled", true);
+    $("#submit-score-button").addClass("hidden").prop("disabled", true).text("Save Score");
+    $("#change-name-button").removeClass("hidden").prop("disabled", false);
+    $("#play-again-button").removeClass("hidden");
+    setScoreSubmitStatus("Score could not be saved.", true, false);
   }
 
   function setLeaderboardStatus(message, isError) {
@@ -624,7 +666,7 @@ export function mountBeatTheScrambler(posthog) {
   }
 
   function sanitizePlayerName(name) {
-    return utils.sanitizePlayerName(name);
+    return normalizeArcadeName(name);
   }
 
   function normalizeRuns(runs) {
@@ -679,11 +721,11 @@ export function mountBeatTheScrambler(posthog) {
     $.each(runs, function(index, run) {
       list.append(
         $("<tr></tr>")
-          .append($("<td></td>").text(index + 1))
-          .append($("<td></td>").text(run.name))
-          .append($("<td></td>").text(run.moves))
-          .append($("<td></td>").text(formatTime(run.time)))
-          .append($("<td></td>").text(formatCompletedAt(run.completedAt)))
+          .append($("<td></td>").attr("data-label", "Rank").text(index + 1))
+          .append($("<td></td>").attr("data-label", "Name").text(run.name))
+          .append($("<td></td>").attr("data-label", "Moves").text(run.moves))
+          .append($("<td></td>").attr("data-label", "Time").text(formatTime(run.time)))
+          .append($("<td></td>").attr("data-label", "Finished").text(formatCompletedAt(run.completedAt)))
       );
     });
 
@@ -733,28 +775,35 @@ export function mountBeatTheScrambler(posthog) {
     }
   }
 
-  async function submitScore() {
+  async function submitScore(playerNameOverride) {
     let playerName;
     let response;
     let payload;
     let submittedLevel;
+    let submission;
 
-    if (!pendingSubmission) {
+    if (!pendingSubmission || pendingSubmission.submissionStarted) {
       return;
     }
 
-    submittedLevel = pendingSubmission.level;
-    playerName = sanitizePlayerName($("#score-name").val());
+    submission = pendingSubmission;
+    submittedLevel = submission.level;
+    playerName = sanitizePlayerName(playerNameOverride || $("#score-name").val());
 
     if (!playerName) {
-      setScoreSubmitStatus("Enter a name with at least 1 character.", true);
+      showNamePromptState("Enter a name with at least 1 character.", true);
       return;
     }
 
-    $("#score-name").val(playerName).prop("disabled", true);
+    submission.submissionStarted = true;
+    $("#score-name").val(playerName);
     saveLastPlayerName(playerName);
-    $("#submit-score-button").prop("disabled", true).text("Saving...");
-    setScoreSubmitStatus("Saving score...", false, false);
+    showAutoSaveState(playerName);
+    $("#play-again-button").trigger("focus");
+    posthog.capture("score_auto_save_started", {
+      game: "beat-the-scrambler",
+      difficulty: submittedLevel
+    });
 
     try {
       response = await fetch(API_BASE_URL + "/api/scores", {
@@ -764,9 +813,9 @@ export function mountBeatTheScrambler(posthog) {
         },
         body: JSON.stringify({
           name: playerName,
-          level: pendingSubmission.level,
-          moves: pendingSubmission.moves,
-          time: pendingSubmission.time
+          level: submission.level,
+          moves: submission.moves,
+          time: submission.time
         })
       });
 
@@ -781,15 +830,23 @@ export function mountBeatTheScrambler(posthog) {
       pendingSubmission = null;
       showScoreSavedState();
 
+      posthog.capture("score_auto_save_success", {
+        game: "beat-the-scrambler",
+        difficulty: submittedLevel
+      });
       posthog.capture("score_submitted", {
         game: "beat-the-scrambler",
         difficulty: submittedLevel
       });
     } catch (error) {
-      $("#score-name").prop("disabled", false);
-      $("#submit-score-button").prop("disabled", false).text("Save Score");
-      setScoreSubmitStatus(error.message || "Score submission failed.", true, false);
+      pendingSubmission = null;
+      showScoreFailedState();
 
+      posthog.capture("score_auto_save_failed", {
+        game: "beat-the-scrambler",
+        difficulty: submittedLevel,
+        error: error.message || "Score submission failed."
+      });
       posthog.capture("score_submit_failed", {
         game: "beat-the-scrambler",
         difficulty: submittedLevel,
@@ -800,6 +857,37 @@ export function mountBeatTheScrambler(posthog) {
     if (!$("#leaderboard-modal").hasClass("hidden") && submittedLevel === leaderboardViewLevel) {
       updateLeaderboardModal();
     }
+  }
+
+  function saveArcadeNameChange() {
+    let playerName;
+
+    if (pendingSubmission && !pendingSubmission.submissionStarted) {
+      submitScore();
+      return;
+    }
+
+    playerName = sanitizePlayerName($("#score-name").val());
+
+    if (!playerName) {
+      showNamePromptState("Enter a name with at least 1 character.", true);
+      return;
+    }
+
+    saveLastPlayerName(playerName);
+    posthog.capture("arcade_name_set", { game: "beat-the-scrambler" });
+    $("#score-name").val(playerName);
+    $("#score-name-label").addClass("hidden");
+    $("#score-name").addClass("hidden").prop("disabled", true);
+    $("#submit-score-button").addClass("hidden").prop("disabled", true).text("Save Score");
+    $("#change-name-button").removeClass("hidden").prop("disabled", false);
+    $("#play-again-button").removeClass("hidden");
+    setScoreSubmitStatus("Arcade name saved as " + playerName + ".", false, true);
+  }
+
+  function changeArcadeName() {
+    showNamePromptState("Enter a new arcade name.", false);
+    $("#score-name").trigger("focus");
   }
 
   function showLeaderboardLevel(levelName) {
@@ -991,9 +1079,11 @@ export function mountBeatTheScrambler(posthog) {
       hasWon = true;
       stopTimer();
       pendingSubmission = {
+        id: ++scoreRunId,
         level: currentLevelName,
         moves: moveCount,
-        time: timerSeconds
+        time: timerSeconds,
+        submissionStarted: false
       };
       isNewBest = updateBestForCurrentLevel();
       updateHud();
@@ -1004,7 +1094,9 @@ export function mountBeatTheScrambler(posthog) {
       refreshLeaderboard(currentLevelName);
       syncMobilePlayUi();
       showWinModal();
-      $("#score-name").trigger("focus");
+      if (!loadLastPlayerName()) {
+        $("#score-name").trigger("focus");
+      }
 
       posthog.capture("puzzle_solved", {
         game: "beat-the-scrambler",
@@ -1206,9 +1298,11 @@ export function mountBeatTheScrambler(posthog) {
     $(document).off(EVENT_NAMESPACE);
     $("#board").off(EVENT_NAMESPACE);
     $("#win-modal-close").off(EVENT_NAMESPACE);
+    $("#win-leaderboard-button").off(EVENT_NAMESPACE);
     $("#play-again-button").off(EVENT_NAMESPACE);
     $("#win-modal").off(EVENT_NAMESPACE);
     $("#submit-score-button").off(EVENT_NAMESPACE);
+    $("#change-name-button").off(EVENT_NAMESPACE);
     $("#score-name").off(EVENT_NAMESPACE);
     $("#leaderboard-button").off(EVENT_NAMESPACE);
     $("#menu-leaderboard-button").off(EVENT_NAMESPACE);
@@ -1237,17 +1331,19 @@ export function mountBeatTheScrambler(posthog) {
     $("#board").on("touchstart" + EVENT_NAMESPACE, handleBoardTouchStart);
     $("#board").on("touchend" + EVENT_NAMESPACE, handleBoardTouchEnd);
     $("#win-modal-close").on("click" + EVENT_NAMESPACE, requestWinModalClose);
+    $("#win-leaderboard-button").on("click" + EVENT_NAMESPACE, showLeaderboardModal);
     $("#play-again-button").on("click" + EVENT_NAMESPACE, playAgain);
     $("#win-modal").on("click" + EVENT_NAMESPACE, function(event) {
       if (event.target === this) {
         requestWinModalClose();
       }
     });
-    $("#submit-score-button").on("click" + EVENT_NAMESPACE, submitScore);
+    $("#submit-score-button").on("click" + EVENT_NAMESPACE, saveArcadeNameChange);
+    $("#change-name-button").on("click" + EVENT_NAMESPACE, changeArcadeName);
     $("#score-name").on("keydown" + EVENT_NAMESPACE, function(event) {
       if (event.which === 13) {
         event.preventDefault();
-        submitScore();
+        saveArcadeNameChange();
       }
     });
     $("#score-name").on("change" + EVENT_NAMESPACE + " blur" + EVENT_NAMESPACE, persistScoreNameInput);
@@ -1304,9 +1400,11 @@ export function mountBeatTheScrambler(posthog) {
     $("#board").off(EVENT_NAMESPACE).addClass("hidden");
     $("#board .tile").remove();
     $("#win-modal-close").off(EVENT_NAMESPACE);
+    $("#win-leaderboard-button").off(EVENT_NAMESPACE);
     $("#play-again-button").off(EVENT_NAMESPACE);
     $("#win-modal").off(EVENT_NAMESPACE);
     $("#submit-score-button").off(EVENT_NAMESPACE);
+    $("#change-name-button").off(EVENT_NAMESPACE);
     $("#score-name").off(EVENT_NAMESPACE);
     $("#leaderboard-button").off(EVENT_NAMESPACE);
     $("#menu-leaderboard-button").off(EVENT_NAMESPACE);

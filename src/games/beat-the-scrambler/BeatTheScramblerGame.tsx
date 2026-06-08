@@ -137,22 +137,40 @@ export function BeatTheScramblerGame() {
       </div>
       <div id="win-modal" className="modal hidden">
         <div className="modal-content">
+          <p className="modal-kicker">Puzzle Solved</p>
           <h1>You Win</h1>
-          <p>Congratulations. You solved the puzzle.</p>
           <p id="scrambler-win-line" className="scrambler-line">Not bad.</p>
-          <p id="win-stats">Time: 00:00 | Moves: 0</p>
-          <p id="win-best">Personal Best: No best yet</p>
+          <div id="win-stats" className="win-stat-grid" aria-label="Puzzle results">
+            <span>
+              <small>Time</small>
+              <strong id="win-stat-time">00:00</strong>
+            </span>
+            <span>
+              <small>Moves</small>
+              <strong id="win-stat-moves">0</strong>
+            </span>
+            <span>
+              <small>Difficulty</small>
+              <strong id="win-stat-difficulty">Medium</strong>
+            </span>
+          </div>
+          <p id="win-best" className="personal-best">Personal Best: No best yet</p>
           <p id="win-best-badge" className="hidden">New Personal Best</p>
           <label id="score-name-label" htmlFor="score-name">Arcade Name</label>
           <input id="score-name" type="text" maxLength={12} autoComplete="nickname" placeholder="AAA" />
           <p id="score-submit-status" className="modal-note">Enter a name to save your score.</p>
           <button id="submit-score-button" type="button">Save Score</button>
-          <button id="play-again-button" className="hidden" type="button">Play Again</button>
-          <button id="win-modal-close" type="button">Back To Levels</button>
+          <button id="change-name-button" className="hidden" type="button">Change Name</button>
+          <div className="game-over-actions">
+            <button id="play-again-button" type="button">Play Again</button>
+            <button id="win-leaderboard-button" type="button">View Leaderboard</button>
+            <button id="win-modal-close" type="button">Back To Menu</button>
+          </div>
         </div>
       </div>
       <div id="leaderboard-modal" className="modal hidden">
-        <div className="modal-content modal-leaderboard">
+        <div className="modal-content modal-leaderboard leaderboard-screen">
+          <p className="modal-kicker">Leaderboard</p>
           <h1>Leaderboard</h1>
           <div id="leaderboard-level-switcher" className="leaderboard-level-switcher" role="tablist" aria-label="Leaderboard difficulty">
             <button className="leaderboard-level-button" type="button" data-level="easy">Easy</button>
@@ -176,7 +194,7 @@ export function BeatTheScramblerGame() {
             </table>
           </div>
           <p id="leaderboard-empty" className="hidden">No scores yet for this difficulty.</p>
-          <button id="leaderboard-close" type="button">Close</button>
+          <button id="leaderboard-close" type="button">Back</button>
         </div>
       </div>
       <div id="confirm-modal" className="modal hidden">
