@@ -447,6 +447,9 @@
 
 :global(.near-miss-score-form button) {
   margin-top: 4px;
+  min-height: 34px;
+  background: rgba(244, 242, 238, 0.08);
+  color: #d7d1c6;
 }
 
 :global(.near-miss-hud) {

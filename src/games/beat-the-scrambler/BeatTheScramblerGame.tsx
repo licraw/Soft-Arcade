@@ -147,6 +147,7 @@ export function BeatTheScramblerGame() {
           <input id="score-name" type="text" maxLength={12} autoComplete="nickname" placeholder="AAA" />
           <p id="score-submit-status" className="modal-note">Enter a name to save your score.</p>
           <button id="submit-score-button" type="button">Save Score</button>
+          <button id="change-name-button" className="hidden" type="button">Change Name</button>
           <button id="play-again-button" className="hidden" type="button">Play Again</button>
           <button id="win-modal-close" type="button">Back To Levels</button>
         </div>

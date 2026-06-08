@@ -10,8 +10,10 @@ type NearMissGameOverModalProps = {
   };
   snapshot: NearMissSnapshot;
   onPlayerNameChange: (name: string) => void;
+  onChangeName: () => void;
   onRestart: () => void;
   onSubmitScore: () => void;
+  showNameEntry: boolean;
 };
 
 export function NearMissGameOverModal({
@@ -19,8 +21,10 @@ export function NearMissGameOverModal({
   scoreSubmission,
   snapshot,
   onPlayerNameChange,
+  onChangeName,
   onRestart,
-  onSubmitScore
+  onSubmitScore,
+  showNameEntry
 }: NearMissGameOverModalProps) {
   const distanceMiles = getDisplayedDistanceMiles(snapshot.distance);
   const averageSpeed = Math.max(0, Math.round(snapshot.averageSpeed));
@@ -52,33 +56,42 @@ export function NearMissGameOverModal({
             <strong>{averageSpeed} MPH</strong>
           </span>
         </div>
-        <form
-          className="near-miss-score-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmitScore();
-          }}
-        >
-          <label htmlFor="near-miss-score-name">Arcade Name</label>
-          <input
-            id="near-miss-score-name"
-            type="text"
-            maxLength={MAX_PLAYER_NAME_LENGTH}
-            autoComplete="nickname"
-            placeholder="AAA"
-            value={playerName}
-            disabled={scoreSaved || scoreSaving}
-            onChange={(event) => onPlayerNameChange(event.target.value)}
-          />
-          <p className={scoreSubmission.status === "error" ? "error" : scoreSubmission.status === "saved" ? "success" : undefined}>
-            {scoreSubmission.message}
-          </p>
-          {scoreSaved ? null : (
+        {showNameEntry ? (
+          <form
+            className="near-miss-score-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmitScore();
+            }}
+          >
+            <label htmlFor="near-miss-score-name">Arcade Name</label>
+            <input
+              id="near-miss-score-name"
+              type="text"
+              maxLength={MAX_PLAYER_NAME_LENGTH}
+              autoComplete="nickname"
+              placeholder="AAA"
+              value={playerName}
+              disabled={scoreSaving}
+              onChange={(event) => onPlayerNameChange(event.target.value)}
+            />
+            <p className={scoreSubmission.status === "error" ? "error" : scoreSubmission.status === "saved" ? "success" : undefined}>
+              {scoreSubmission.message}
+            </p>
             <button type="submit" disabled={scoreSaving}>
-              {scoreSaving ? "Saving..." : "Save Score"}
+              {scoreSaving ? "Saving..." : scoreSaved ? "Save Name" : "Save Score"}
             </button>
-          )}
-        </form>
+          </form>
+        ) : (
+          <div className="near-miss-score-form" aria-live="polite">
+            <p className={scoreSubmission.status === "error" ? "error" : scoreSubmission.status === "saved" ? "success" : undefined}>
+              {scoreSubmission.message}
+            </p>
+            <button type="button" onClick={onChangeName} disabled={scoreSaving}>
+              Change Name
+            </button>
+          </div>
+        )}
         <button type="button" onClick={onRestart}>
           Play Again
         </button>

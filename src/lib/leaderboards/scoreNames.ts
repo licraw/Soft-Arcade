@@ -1,35 +1,14 @@
-export const PLAYER_NAME_STORAGE_KEY = "tileGameLastPlayerName";
-export const MAX_PLAYER_NAME_LENGTH = 12;
+import { getArcadeName, MAX_ARCADE_NAME_LENGTH, normalizeArcadeName, setArcadeName } from "@/lib/arcadeName";
 
-export function sanitizePlayerName(name: unknown) {
-  if (typeof name !== "string") {
-    return "";
-  }
+export const PLAYER_NAME_STORAGE_KEY = "softArcade.arcadeName";
+export const MAX_PLAYER_NAME_LENGTH = MAX_ARCADE_NAME_LENGTH;
 
-  return name
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/[^A-Za-z0-9 _.-]/g, "")
-    .slice(0, MAX_PLAYER_NAME_LENGTH)
-    .toUpperCase();
-}
+export const sanitizePlayerName = normalizeArcadeName;
 
 export function loadStoredPlayerName() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return sanitizePlayerName(window.localStorage.getItem(PLAYER_NAME_STORAGE_KEY));
+  return getArcadeName();
 }
 
 export function saveStoredPlayerName(name: string) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const sanitizedName = sanitizePlayerName(name);
-
-  if (sanitizedName) {
-    window.localStorage.setItem(PLAYER_NAME_STORAGE_KEY, sanitizedName);
-  }
+  setArcadeName(name);
 }
