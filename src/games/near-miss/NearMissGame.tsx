@@ -6,6 +6,8 @@ import { NearMissGameLoop, type NearMissSnapshot } from "./engine/gameLoop";
 import { createInputController, type NearMissControl, type NearMissInputController } from "./engine/input";
 import { NearMissGameOverModal } from "./ui/NearMissGameOverModal";
 import { NearMissHud } from "./ui/NearMissHud";
+import { NearMissLeaderboardScreen } from "./ui/NearMissLeaderboardScreen";
+import redCarSprite from "./ui/redcar.svg";
 import { getArcadeName, setArcadeName } from "@/lib/arcadeName";
 import { notifyLeaderboardUpdated, submitLeaderboardScore } from "@/lib/leaderboards/api";
 import { getLeaderboardConfig } from "@/lib/leaderboards/config";
@@ -51,9 +53,11 @@ export function NearMissGame() {
   const [snapshot, setSnapshot] = useState<NearMissSnapshot>(initialSnapshot);
   const snapshotRef = useRef(snapshot);
   const runIdRef = useRef(0);
+  const runBestAtStartRef = useRef(0);
   const submittedRunIdRef = useRef<number | null>(null);
   const [mobilePlayMode, setMobilePlayMode] = useState(false);
   const [mobilePaused, setMobilePaused] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [nameEntryOpen, setNameEntryOpen] = useState(false);
   const [scoreSubmission, setScoreSubmission] = useState<ScoreSubmissionState>(initialScoreSubmission);
@@ -71,6 +75,7 @@ export function NearMissGame() {
     }
 
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    runBestAtStartRef.current = bestScore;
     const loop = new NearMissGameLoop({
       canvas,
       bestScore,
@@ -154,10 +159,14 @@ export function NearMissGame() {
   }, [focusMobileGame]);
 
   const startRun = useCallback(async () => {
+    const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+
     clearAllInputs();
     visibilityPausedRef.current = false;
     runIdRef.current += 1;
+    runBestAtStartRef.current = bestScore;
     submittedRunIdRef.current = null;
+    setLeaderboardOpen(false);
     setPlayerName(getArcadeName());
     setNameEntryOpen(false);
     setScoreSubmission(initialScoreSubmission);
@@ -178,8 +187,10 @@ export function NearMissGame() {
     submittedRunIdRef.current = null;
     setPlayerName(getArcadeName());
     setNameEntryOpen(false);
+    setLeaderboardOpen(false);
     setScoreSubmission(initialScoreSubmission);
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
+    runBestAtStartRef.current = bestScore;
     const didEnterMobilePlayMode = await enterMobilePlayMode();
     setMobilePaused(false);
     loopRef.current?.restart(bestScore);
@@ -196,6 +207,7 @@ export function NearMissGame() {
     visibilityPausedRef.current = false;
     submittedRunIdRef.current = null;
     setNameEntryOpen(false);
+    setLeaderboardOpen(false);
     setScoreSubmission(initialScoreSubmission);
     const bestScore = Number(window.localStorage.getItem(BEST_SCORE_KEY) || 0);
     loopRef.current?.cancelRun(bestScore);
@@ -347,6 +359,16 @@ export function NearMissGame() {
     loopRef.current?.start();
   }, [clearAllInputs, enterMobilePlayMode]);
 
+  const openLeaderboard = useCallback(() => {
+    setLeaderboardOpen(true);
+    clearAllInputs();
+    posthog.capture("leaderboard_opened", { game: "near-miss" });
+  }, [clearAllInputs]);
+
+  const closeLeaderboard = useCallback(() => {
+    setLeaderboardOpen(false);
+  }, []);
+
   useEffect(() => {
     snapshotRef.current = snapshot;
   }, [snapshot]);
@@ -428,7 +450,7 @@ export function NearMissGame() {
     };
   }, [mobilePaused, mobilePlayMode, snapshot.status]);
 
-  const reserveMobileControls = mobilePlayMode && snapshot.status !== "ready";
+  const reserveMobileControls = mobilePlayMode && snapshot.status !== "ready" && !leaderboardOpen;
   const mobileControlsDisabled = mobilePaused || snapshot.status !== "running";
   const mobileScrollLocked = mobilePlayMode && !mobilePaused && snapshot.status === "running";
 
@@ -442,7 +464,7 @@ export function NearMissGame() {
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
     >
-      {mobilePlayMode ? (
+      {mobilePlayMode && !leaderboardOpen ? (
         <div className={styles.mobilePlayActions} aria-label="Near Miss mobile play mode controls">
           {snapshot.status === "running" ? (
             <button type="button" onClick={mobilePaused ? resumeRun : pauseRun}>
@@ -462,25 +484,38 @@ export function NearMissGame() {
         {snapshot.status === "ready" ? (
           <div className={styles.startOverlay}>
             <div className={styles.startPanel}>
-              <p>Soft Arcade</p>
-              <h2>Near Miss</h2>
-              <span>Steer through traffic. Brake late. Chase clean close calls.</span>
-              <button type="button" onClick={startRun}>
+              <p className={styles.startKicker}>Soft Arcade</p>
+              <h2 className={styles.startTitle}>Near Miss</h2>
+              <span className={styles.startTagline}>Steer through traffic. Brake late. Chase clean close calls.</span>
+              <div className={styles.scgMascot} aria-hidden="true">
+                <img src={redCarSprite.src} alt="" className={styles.scgCar} />
+                <div className={styles.scgShadow}></div>
+              </div>
+              <button type="button" className={styles.startRunButton} onClick={startRun}>
                 Start Run
+              </button>
+              <button type="button" className={styles.startLeaderboardButton} onClick={openLeaderboard}>
+                Leaderboard
               </button>
             </div>
           </div>
         ) : null}
 
+        {leaderboardOpen ? <NearMissLeaderboardScreen onBack={closeLeaderboard} /> : null}
+
         {snapshot.status === "gameOver" && snapshot.debug ? <NearMissDebugToolbar snapshot={snapshot} onRestart={restartRun} /> : null}
-        {snapshot.status === "gameOver" && !snapshot.debug ? (
+        {snapshot.status === "gameOver" && !snapshot.debug && !leaderboardOpen ? (
           <NearMissGameOverModal
             playerName={playerName}
             scoreSubmission={scoreSubmission}
             snapshot={snapshot}
+            bestScore={Math.max(snapshot.bestScore, runBestAtStartRef.current)}
+            isNewBest={snapshot.score > runBestAtStartRef.current}
             onPlayerNameChange={setPlayerName}
             onRestart={restartRun}
+            onBackToMenu={exitRun}
             onChangeName={changeArcadeName}
+            onLeaderboard={openLeaderboard}
             onSubmitScore={saveArcadeNameChange}
             showNameEntry={nameEntryOpen}
           />
