@@ -372,35 +372,102 @@
 
 .scgMascot {
   position: relative;
-  width: 118px;
-  height: 86px;
+  width: 154px;
+  height: 118px;
   margin: 4px 0 2px;
-  animation: near-miss-scg-drive 4.8s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.scgRoad {
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: 116px;
+  border: 1px solid rgba(244, 242, 238, 0.08);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(0, 229, 255, 0.08), transparent 18%, transparent 82%, rgba(255, 46, 209, 0.08)),
+    linear-gradient(180deg, rgba(244, 242, 238, 0.07), transparent 18%, rgba(0, 0, 0, 0.16)),
+    #11141b;
+  box-shadow:
+    inset 20px 0 24px rgba(0, 0, 0, 0.12),
+    inset -20px 0 24px rgba(0, 0, 0, 0.12),
+    0 18px 36px rgba(0, 0, 0, 0.18);
+  transform: translateX(-50%);
+}
+
+.scgRoad::before,
+.scgRoad::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(244, 242, 238, 0.11);
+}
+
+.scgRoad::before {
+  left: 18px;
+}
+
+.scgRoad::after {
+  right: 18px;
+}
+
+.scgLaneTrack {
+  position: absolute;
+  inset: -28px 0;
+  left: 50%;
+  width: 3px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(250, 204, 21, 0.62) 0 15px,
+    transparent 15px 32px
+  );
+  opacity: 0.54;
+  transform: translateX(-50%);
+  animation: near-miss-scg-lane-scroll 1.2s linear infinite;
+}
+
+.scgTrafficCar {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  z-index: 1;
+  width: 65px;
+  height: 65px;
+  object-fit: contain;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 10px rgba(65, 171, 232, 0.16));
+  transform: translateX(calc(-50% + 20px)) translateY(-4px);
+  animation: near-miss-scg-traffic 3.6s ease-in-out infinite;
 }
 
 .scgCar {
   position: absolute;
   left: 50%;
-  top: 0;
-  width: 82px;
-  height: 82px;
+  top: 53px;
+  z-index: 2;
+  width: 65px;
+  height: 65px;
   object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(255, 46, 209, 0.16));
-  transform: translateX(-50%) rotate(90deg);
-  animation: near-miss-scg-car-bob 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(255, 46, 209, 0.18));
+  transform: translateX(-50%) rotate(180deg);
+  animation: near-miss-scg-steer 3.6s ease-in-out infinite;
 }
 
 .scgShadow {
   position: absolute;
+  z-index: 2;
   left: 50%;
-  bottom: 4px;
-  width: 64px;
+  bottom: 5px;
+  width: 50px;
   height: 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.32);
   filter: blur(2px);
   transform: translateX(-50%);
-  animation: near-miss-scg-shadow 4.8s ease-in-out infinite;
+  animation: near-miss-scg-shadow 3.6s ease-in-out infinite;
 }
 
 :global(.near-miss-final-score) {
@@ -863,54 +930,110 @@
   }
 }
 
-@keyframes near-miss-scg-drive {
-  0%,
+@keyframes near-miss-scg-steer {
+  0% {
+    transform: translateX(-50%) rotate(180deg);
+  }
+
+  16% {
+    transform: translateX(calc(-50% + 1px)) rotate(180.5deg);
+  }
+
+  28% {
+    transform: translateX(calc(-50% - 10px)) rotate(176deg);
+  }
+
+  42% {
+    transform: translateX(calc(-50% - 22px)) rotate(174deg);
+  }
+
+  58% {
+    transform: translateX(calc(-50% - 24px)) rotate(175deg);
+  }
+
+  68% {
+    transform: translateX(calc(-50% - 18px)) rotate(178deg);
+  }
+
+  82% {
+    transform: translateX(calc(-50% - 6px)) rotate(181deg);
+  }
+
   100% {
-    transform: translate3d(-4px, 0, 0);
-  }
-
-  45% {
-    transform: translate3d(5px, -2px, 0);
-  }
-
-  72% {
-    transform: translate3d(1px, 1px, 0);
+    transform: translateX(-50%) rotate(180deg);
   }
 }
 
-@keyframes near-miss-scg-car-bob {
-  0%,
-  100% {
-    transform: translateX(-50%) rotate(90deg) translateY(0);
+@keyframes near-miss-scg-traffic {
+  0% {
+    opacity: 0.62;
+    transform: translateX(calc(-50% + 20px)) translateY(-4px);
   }
 
-  50% {
-    transform: translateX(-50%) rotate(90deg) translateY(-3px);
+  20% {
+    opacity: 0.74;
+    transform: translateX(calc(-50% + 20px)) translateY(-2px);
+  }
+
+  64% {
+    opacity: 0.78;
+    transform: translateX(calc(-50% + 20px)) translateY(1px);
+  }
+
+  100% {
+    opacity: 0.62;
+    transform: translateX(calc(-50% + 20px)) translateY(-4px);
+  }
+}
+
+@keyframes near-miss-scg-lane-scroll {
+  from {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(32px);
   }
 }
 
 @keyframes near-miss-scg-shadow {
   0%,
   100% {
-    opacity: 0.48;
+    opacity: 0.42;
     transform: translateX(-50%) scaleX(1);
   }
 
-  45% {
-    opacity: 0.3;
-    transform: translateX(-50%) scaleX(0.82);
+  28% {
+    opacity: 0.34;
+    transform: translateX(calc(-50% - 9px)) scaleX(0.94);
   }
 
-  72% {
+  42% {
+    opacity: 0.36;
+    transform: translateX(calc(-50% - 19px)) scaleX(0.91);
+  }
+
+  58% {
+    opacity: 0.38;
+    transform: translateX(calc(-50% - 21px)) scaleX(0.93);
+  }
+
+  68% {
+    opacity: 0.39;
+    transform: translateX(calc(-50% - 16px)) scaleX(0.96);
+  }
+
+  82% {
     opacity: 0.4;
-    transform: translateX(-50%) scaleX(0.94);
+    transform: translateX(calc(-50% - 5px)) scaleX(0.99);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .feedbackLine,
-  .scgMascot,
   .scgCar,
+  .scgTrafficCar,
+  .scgLaneTrack,
   .scgShadow {
     animation: none;
   }
@@ -942,14 +1065,42 @@
   }
 
   .scgMascot {
-    width: 96px;
-    height: 70px;
+    width: 124px;
+    height: 94px;
     margin: 0;
   }
 
+  .scgRoad {
+    width: 92px;
+  }
+
+  .scgRoad::before {
+    left: 14px;
+  }
+
+  .scgRoad::after {
+    right: 14px;
+  }
+
   .scgCar {
-    width: 68px;
-    height: 68px;
+    top: 43px;
+    width: 49px;
+    height: 49px;
+  }
+
+  .scgTrafficCar {
+    top: -7px;
+    width: 49px;
+    height: 49px;
+  }
+
+  .scgLaneTrack {
+    width: 2px;
+  }
+
+  .scgShadow {
+    bottom: 4px;
+    width: 38px;
   }
 
   .startPanel .startRunButton {
