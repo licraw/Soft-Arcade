@@ -379,7 +379,8 @@ export class NearMissGameLoop {
         traffic: state.traffic,
         carHeight,
         nextId: this.nextTrafficId,
-        elapsed: state.elapsed
+        elapsed: state.elapsed,
+        playerSpeed: state.speed
       });
 
       if (spawned) {
