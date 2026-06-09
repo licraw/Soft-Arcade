@@ -31,7 +31,6 @@ type SpawnOptions = {
   carHeight: number;
   nextId: number;
   elapsed: number;
-  playerSpeed: number;
 };
 
 type TrafficPacketCar = {
@@ -118,7 +117,7 @@ export function getSpawnInterval(speed: number, elapsed: number) {
 }
 
 export function spawnTrafficPacket(options: SpawnOptions) {
-  const { laneSystem, traffic, carHeight, nextId, elapsed, playerSpeed } = options;
+  const { laneSystem, traffic, carHeight, nextId, elapsed } = options;
   const blockedLanes = new Set(
     traffic
       .filter((car) => car.y < carHeight * TUNING.spawnBlockedLaneLookaheadCars)
@@ -174,8 +173,6 @@ export function spawnTrafficPacket(options: SpawnOptions) {
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
     const cruiseMph = TUNING.trafficMinCruiseMph + Math.random() * (TUNING.trafficMaxCruiseMph - TUNING.trafficMinCruiseMph);
     const cruiseWorldSpeed = internalSpeedFromMph(cruiseMph);
-    const packetWorldSpeed = playerSpeed * packetCar.speedRatio;
-    const trafficWorldSpeed = Math.min(cruiseWorldSpeed, packetWorldSpeed);
 
     packetCars.push({
       id,
@@ -188,8 +185,8 @@ export function spawnTrafficPacket(options: SpawnOptions) {
       width,
       height,
       vehicleConfigId: vehicleConfig.id,
-      desiredWorldSpeed: trafficWorldSpeed,
-      currentWorldSpeed: trafficWorldSpeed,
+      desiredWorldSpeed: cruiseWorldSpeed,
+      currentWorldSpeed: cruiseWorldSpeed,
       blockedById: null,
       followingGapPx: null,
       emergencyCorrected: false,
