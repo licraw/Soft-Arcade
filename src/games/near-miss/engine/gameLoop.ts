@@ -100,6 +100,10 @@ export type NearMissRuntimeState = {
   nextFeedbackAt: number;
   score: number;
   bonusScore: number;
+  scoreDistance: number;
+  scoreElapsed: number;
+  scoreOffset: number;
+  scoreSpeed: number;
   speed: number;
   distance: number;
   elapsed: number;
@@ -301,6 +305,10 @@ export class NearMissGameLoop {
       nextFeedbackAt: 0,
       score: 0,
       bonusScore: 0,
+      scoreDistance: 0,
+      scoreElapsed: 0,
+      scoreOffset: 0,
+      scoreSpeed: TUNING.cruiseSpeed,
       speed: TUNING.cruiseSpeed,
       distance: 0,
       elapsed: 0,
@@ -421,15 +429,32 @@ export class NearMissGameLoop {
     state.feedbacks = state.feedbacks
       .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
       .filter((feedback) => feedback.age < feedback.life);
-    const speedScoreFactor = state.speed < baselineSpeed ? SCORE_TUNING.brakingScorePenalty : 1;
+
+    if (!state.input.brake) {
+      state.scoreDistance += state.speed * delta;
+      state.scoreElapsed += delta;
+      state.scoreSpeed = state.speed;
+    }
+
+    const scoringBaselineSpeed = getBaselineSpeed(state.scoreElapsed);
+    const speedScoreFactor = state.scoreSpeed < scoringBaselineSpeed ? SCORE_TUNING.brakingScorePenalty : 1;
     const safeChannelScoreFactor = state.safeChannelTimer > TUNING.safeChannelWindow ? TUNING.safeChannelScorePenalty : 1;
-    state.score = Math.floor(
-      ((getDistanceScore(state.distance) + getSurvivalScore(state.elapsed) + getSpeedScore(state.speed, baselineSpeed, state.elapsed)) *
+    const rawScore =
+      ((getDistanceScore(state.scoreDistance) + getSurvivalScore(state.scoreElapsed) + getSpeedScore(state.scoreSpeed, scoringBaselineSpeed, state.scoreElapsed)) *
         speedScoreFactor +
         state.bonusScore +
         state.streak * TUNING.streakScoreStep) *
-        safeChannelScoreFactor
-    );
+      safeChannelScoreFactor;
+
+    if (!state.input.brake) {
+      const candidateScore = rawScore + state.scoreOffset;
+
+      if (candidateScore < state.score) {
+        state.scoreOffset += state.score - candidateScore;
+      }
+
+      state.score = Math.max(state.score, Math.floor(rawScore + state.scoreOffset));
+    }
   }
 
   private updateTrafficFollowing(delta: number) {
@@ -615,6 +640,12 @@ export class NearMissGameLoop {
   }
 
   private awardNearMiss(car: TrafficCar) {
+    if (this.state.input.brake) {
+      car.nearMissed = true;
+      car.streakAccounted = true;
+      return;
+    }
+
     const baselineSpeed = getBaselineSpeed(this.state.elapsed);
     const speedBonusFactor = this.state.input.brake || this.state.speed < baselineSpeed * 0.92 ? SCORE_TUNING.brakingNearMissPenalty : 1;
     const bonus = Math.round(getNearMissBonus(this.state.streak) * speedBonusFactor);
@@ -659,6 +690,7 @@ export class NearMissGameLoop {
     this.state.safeChannelTimer = Math.max(0, this.state.safeChannelTimer - delta * TUNING.safeChannelTrafficRecoveryRate);
 
     if (
+      !this.state.input.brake &&
       nearbySplitTraffic >= TUNING.laneSplitBonusThreshold &&
       this.state.laneSplitCooldown === 0 &&
       Math.abs(this.state.player.lateralVelocity) >= TUNING.laneSplitMinLateralSpeed
