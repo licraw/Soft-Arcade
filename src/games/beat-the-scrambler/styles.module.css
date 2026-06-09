@@ -455,7 +455,6 @@
     max-height: calc(100% - 28px);
     padding: 24px;
     border-radius: 8px;
-    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 
