@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { GameDefinition } from "@/games/registry";
+import blueSedanSprite from "@/games/near-miss/ui/blue-sedan.svg";
+import redCarSprite from "@/games/near-miss/ui/redcar.svg";
 import { ScramblerMascot } from "./ScramblerMascot";
 
 type ArcadeGameCardProps = {
@@ -62,11 +64,11 @@ function NearMissCardArt() {
   return (
     <div className="near-miss-card-art">
       <div className="near-miss-card-road">
-        <span></span>
-        <span></span>
+        <span className="near-miss-card-lane-track"></span>
       </div>
-      <div className="near-miss-card-car near-miss-card-player"></div>
-      <div className="near-miss-card-car near-miss-card-traffic"></div>
+      <img src={blueSedanSprite.src} alt="" className="near-miss-card-car near-miss-card-traffic" />
+      <img src={redCarSprite.src} alt="" className="near-miss-card-car near-miss-card-player" />
+      <span className="near-miss-card-car-shadow"></span>
     </div>
   );
 }

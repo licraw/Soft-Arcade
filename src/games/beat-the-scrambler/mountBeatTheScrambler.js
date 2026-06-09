@@ -641,14 +641,16 @@ export function mountBeatTheScrambler(posthog) {
     $("#play-again-button").trigger("focus");
   }
 
-  function showScoreFailedState() {
+  function showScoreFailedState(message) {
+    let playerName = loadLastPlayerName();
+
     $("#win-modal").removeClass("is-score-saved");
-    $("#score-name-label").addClass("hidden");
-    $("#score-name").addClass("hidden").prop("disabled", true);
-    $("#submit-score-button").addClass("hidden").prop("disabled", true).text("Save Score");
+    $("#score-name-label").removeClass("hidden");
+    $("#score-name").removeClass("hidden").val(playerName).prop("disabled", false);
+    $("#submit-score-button").removeClass("hidden").prop("disabled", false).text("Try Again");
     $("#change-name-button").removeClass("hidden").prop("disabled", false);
     $("#play-again-button").removeClass("hidden");
-    setScoreSubmitStatus("Score could not be saved.", true, false);
+    setScoreSubmitStatus(message || "Score could not be saved.", true, false);
   }
 
   function setLeaderboardStatus(message, isError) {
@@ -839,8 +841,9 @@ export function mountBeatTheScrambler(posthog) {
         difficulty: submittedLevel
       });
     } catch (error) {
-      pendingSubmission = null;
-      showScoreFailedState();
+      submission.submissionStarted = false;
+      pendingSubmission = submission;
+      showScoreFailedState(error.message || "Score could not be saved.");
 
       posthog.capture("score_auto_save_failed", {
         game: "beat-the-scrambler",

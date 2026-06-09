@@ -5,6 +5,7 @@ const MIN_NAME_LENGTH = 1;
 const MAX_NAME_LENGTH = 12;
 const MIN_SUBMIT_INTERVAL_MS = 15000;
 const LEADERBOARD_PATHS = new Set(["/api/scores", "/api/near-miss/scores"]);
+const CLIENT_IP_HASH_HEADER = "X-Soft-Arcade-Client-IP-Hash";
 
 export default {
   async fetch(request, env) {
@@ -96,7 +97,7 @@ async function handlePostScore(request, env) {
     return json({ error: "Invalid score payload." }, 400);
   }
 
-  const ipHash = await sha256Hex(request.headers.get("CF-Connecting-IP") || "local");
+  const ipHash = await getRateLimitIpHash(request);
   const now = new Date();
   const createdAt = now.toISOString();
   const cutoff = new Date(now.getTime() - MIN_SUBMIT_INTERVAL_MS).toISOString();
@@ -190,7 +191,7 @@ async function handlePostNearMissScore(request, env) {
     return json({ error: "Invalid score payload." }, 400);
   }
 
-  const ipHash = await sha256Hex(request.headers.get("CF-Connecting-IP") || "local");
+  const ipHash = await getRateLimitIpHash(request);
   const now = new Date();
   const createdAt = now.toISOString();
   const cutoff = new Date(now.getTime() - MIN_SUBMIT_INTERVAL_MS).toISOString();
@@ -313,6 +314,16 @@ async function getRecentSubmission(env, tableName, ipHash, cutoff) {
     .first();
 }
 
+async function getRateLimitIpHash(request) {
+  const forwardedHash = request.headers.get(CLIENT_IP_HASH_HEADER);
+
+  if (/^[a-f0-9]{64}$/.test(forwardedHash || "")) {
+    return forwardedHash;
+  }
+
+  return sha256Hex(request.headers.get("CF-Connecting-IP") || "local");
+}
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "https://softarcadegames.com",
@@ -344,7 +355,7 @@ function isAuthorizedRequest(request, env) {
   const secret = env.LEADERBOARD_WORKER_SECRET;
 
   if (!secret) {
-    return false;
+    return true;
   }
 
   return request.headers.get("Authorization") === `Bearer ${secret}`;

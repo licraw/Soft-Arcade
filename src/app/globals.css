@@ -617,94 +617,90 @@ a {
   width: min(178px, 52vw);
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border: 1px solid rgba(244, 242, 238, 0.14);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(13, 15, 16, 0.94), rgba(24, 28, 29, 0.98) 46%, rgba(13, 15, 16, 0.94)),
-    #101315;
-  box-shadow:
-    inset 0 0 0 1px rgba(60, 255, 143, 0.05),
-    0 18px 40px rgba(0, 0, 0, 0.2);
 }
 
 .near-miss-card-road {
   position: absolute;
-  inset: 0;
-}
-
-.near-miss-card-road::before,
-.near-miss-card-road::after,
-.near-miss-card-road span {
-  content: "";
-  position: absolute;
-  top: -16px;
-  bottom: -16px;
-  width: 2px;
-  background: repeating-linear-gradient(180deg, rgba(244, 242, 238, 0.58) 0 16px, transparent 16px 32px);
-  opacity: 0.8;
+  inset: 12px 30px;
+  border: 1px solid rgba(244, 242, 238, 0.08);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(0, 229, 255, 0.08), transparent 18%, transparent 82%, rgba(255, 46, 209, 0.08)),
+    linear-gradient(180deg, rgba(244, 242, 238, 0.07), transparent 18%, rgba(0, 0, 0, 0.16)),
+    #11141b;
+  box-shadow:
+    inset 18px 0 22px rgba(0, 0, 0, 0.14),
+    inset -18px 0 22px rgba(0, 0, 0, 0.14);
 }
 
 .near-miss-card-road::before {
-  left: 34%;
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 16px;
+  width: 1px;
+  background: rgba(244, 242, 238, 0.11);
 }
 
 .near-miss-card-road::after {
-  right: 34%;
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(244, 242, 238, 0.11);
 }
 
-.near-miss-card-road span:first-child {
-  left: 15%;
-  background: rgba(250, 204, 21, 0.74);
-}
-
-.near-miss-card-road span:last-child {
-  right: 15%;
-  background: rgba(250, 204, 21, 0.74);
+.near-miss-card-lane-track {
+  position: absolute;
+  inset: -28px 0;
+  left: 50%;
+  width: 3px;
+  background: repeating-linear-gradient(180deg, rgba(250, 204, 21, 0.62) 0 15px, transparent 15px 32px);
+  opacity: 0.54;
+  transform: translateX(-50%);
+  animation: near-miss-card-lane-scroll 1.2s linear infinite;
 }
 
 .near-miss-card-car {
   position: absolute;
-  width: 34px;
-  height: 56px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px 8px 5px 5px;
-  box-shadow:
-    inset 0 6px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -8px 0 rgba(0, 0, 0, 0.16),
-    0 8px 18px rgba(0, 0, 0, 0.28);
-}
-
-.near-miss-card-car::before,
-.near-miss-card-car::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(244, 242, 238, 0.72);
-}
-
-.near-miss-card-car::before {
-  top: 11px;
-}
-
-.near-miss-card-car::after {
-  bottom: 9px;
+  left: 50%;
+  width: 65px;
+  height: 65px;
+  object-fit: contain;
 }
 
 .near-miss-card-player {
-  left: 52%;
-  bottom: 18px;
-  background: linear-gradient(180deg, #3cff8f, #087a4a);
-  transform: translateX(-50%) rotate(-5deg);
+  top: 88px;
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(255, 46, 209, 0.18));
+  transform: translateX(-50%) rotate(180deg);
+  animation: near-miss-card-player-dodge 3.6s ease-in-out infinite;
 }
 
 .near-miss-card-traffic {
-  left: 28%;
-  top: 24px;
-  background: linear-gradient(180deg, #ff4d5a, #8e1f2e);
-  transform: rotate(4deg);
+  top: 25px;
+  z-index: 1;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 10px rgba(65, 171, 232, 0.16));
+  transform: translateX(calc(-50% + 20px)) translateY(-4px);
+  animation: near-miss-card-traffic 3.6s ease-in-out infinite;
+}
+
+.near-miss-card-car-shadow {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 20px;
+  width: 50px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  filter: blur(2px);
+  transform: translateX(-50%);
+  animation: near-miss-card-shadow 3.6s ease-in-out infinite;
 }
 
 .daily-scramble-section {
@@ -877,12 +873,115 @@ a {
   }
 }
 
+@keyframes near-miss-card-player-dodge {
+  0% {
+    transform: translateX(-50%) rotate(180deg);
+  }
+
+  16% {
+    transform: translateX(calc(-50% + 1px)) rotate(180.5deg);
+  }
+
+  28% {
+    transform: translateX(calc(-50% - 10px)) rotate(176deg);
+  }
+
+  42% {
+    transform: translateX(calc(-50% - 22px)) rotate(174deg);
+  }
+
+  58% {
+    transform: translateX(calc(-50% - 24px)) rotate(175deg);
+  }
+
+  68% {
+    transform: translateX(calc(-50% - 18px)) rotate(178deg);
+  }
+
+  82% {
+    transform: translateX(calc(-50% - 6px)) rotate(181deg);
+  }
+
+  100% {
+    transform: translateX(-50%) rotate(180deg);
+  }
+}
+
+@keyframes near-miss-card-traffic {
+  0% {
+    opacity: 0.62;
+    transform: translateX(calc(-50% + 20px)) translateY(-4px);
+  }
+
+  20% {
+    opacity: 0.74;
+    transform: translateX(calc(-50% + 20px)) translateY(-2px);
+  }
+
+  64% {
+    opacity: 0.78;
+    transform: translateX(calc(-50% + 20px)) translateY(1px);
+  }
+
+  100% {
+    opacity: 0.62;
+    transform: translateX(calc(-50% + 20px)) translateY(-4px);
+  }
+}
+
+@keyframes near-miss-card-lane-scroll {
+  from {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(32px);
+  }
+}
+
+@keyframes near-miss-card-shadow {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  28% {
+    opacity: 0.34;
+    transform: translateX(calc(-50% - 9px)) scaleX(0.94);
+  }
+
+  42% {
+    opacity: 0.36;
+    transform: translateX(calc(-50% - 19px)) scaleX(0.91);
+  }
+
+  58% {
+    opacity: 0.38;
+    transform: translateX(calc(-50% - 21px)) scaleX(0.93);
+  }
+
+  68% {
+    opacity: 0.39;
+    transform: translateX(calc(-50% - 16px)) scaleX(0.96);
+  }
+
+  82% {
+    opacity: 0.4;
+    transform: translateX(calc(-50% - 5px)) scaleX(0.99);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mascot-orbit,
   .scrambler-mascot,
   .primary-link,
   .secondary-link,
-  .featured-game-card {
+  .featured-game-card,
+  .near-miss-card-lane-track,
+  .near-miss-card-player,
+  .near-miss-card-traffic,
+  .near-miss-card-car-shadow {
     animation: none;
     transition: none;
   }
@@ -978,6 +1077,40 @@ a {
 
   .featured-game-art .scrambler-mascot {
     width: 120px;
+  }
+
+  .near-miss-card-art {
+    width: min(150px, 54vw);
+  }
+
+  .near-miss-card-road {
+    inset: 10px 26px;
+  }
+
+  .near-miss-card-road::before {
+    left: 13px;
+  }
+
+  .near-miss-card-road::after {
+    right: 13px;
+  }
+
+  .near-miss-card-car {
+    width: 52px;
+    height: 52px;
+  }
+
+  .near-miss-card-traffic {
+    top: 20px;
+  }
+
+  .near-miss-card-player {
+    top: 75px;
+  }
+
+  .near-miss-card-car-shadow {
+    bottom: 18px;
+    width: 40px;
   }
 
   .featured-tile-stack {
