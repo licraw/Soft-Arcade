@@ -81,6 +81,8 @@ export type CrashSecondaryImpactDebug = {
   normalX: number;
   normalY: number;
   impactSpeed: number;
+  impactType: "overlap" | "rear-end-swept";
+  lateralOverlap: number;
 };
 
 export type CrashState = {
@@ -102,6 +104,11 @@ export type CrashState = {
   roadSpeedAtImpact: number;
   minRoadSpeedRatio: number;
   finalMessage: string;
+};
+
+type CrashParticipantBounds = {
+  key: "player" | number;
+  bounds: CarBounds;
 };
 
 export type NearMissRuntimeState = {
@@ -567,6 +574,9 @@ export class NearMissGameLoop {
     crash.age += delta;
     this.state.speed = getCrashRoadSpeed(crash);
     this.state.stripeOffset = (this.state.stripeOffset - this.state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
+    const previousParticipantBounds = this.getCrashParticipantBounds(crash);
+    const previousTrafficBoundsById = new Map(this.state.traffic.map((car) => [car.id, { ...car }]));
+
     this.updateCrashMotion(crash.player, delta);
     Object.values(crash.trafficMotionsById).forEach((motion) => this.updateCrashMotion(motion, delta));
 
@@ -579,7 +589,7 @@ export class NearMissGameLoop {
       car.y += relativeYSpeed * delta;
     }
 
-    this.updateSecondaryCrashImpacts(crash);
+    this.updateSecondaryCrashImpacts(crash, previousParticipantBounds, previousTrafficBoundsById);
     this.state.traffic = this.getActiveTraffic();
     this.state.feedbacks = this.state.feedbacks
       .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
@@ -599,7 +609,11 @@ export class NearMissGameLoop {
     motion.angularVelocityDeg *= Math.exp(-TUNING.crashAngularDamping * delta);
   }
 
-  private updateSecondaryCrashImpacts(crash: CrashState) {
+  private updateSecondaryCrashImpacts(
+    crash: CrashState,
+    previousParticipantBounds: readonly CrashParticipantBounds[],
+    previousTrafficBoundsById: ReadonlyMap<number, CarBounds>
+  ) {
     if (
       Object.keys(crash.trafficMotionsById).length >= TUNING.maxCrashParticipants ||
       crash.secondaryImpactCount >= TUNING.maxSecondaryImpacts
@@ -608,6 +622,7 @@ export class NearMissGameLoop {
     }
 
     const playerBounds = this.getCrashAdjustedPlayerBounds(crash);
+    const previousParticipantBoundsByKey = new Map(previousParticipantBounds.map((entry) => [entry.key, entry.bounds]));
     const sources: Array<{
       key: "player" | number;
       motion: CrashVehicleMotion;
@@ -643,7 +658,7 @@ export class NearMissGameLoop {
     for (const source of sources) {
       const sourceSpeed = Math.hypot(source.motion.velocityX, source.motion.velocityY);
 
-      if (sourceSpeed < TUNING.secondaryCrashMinImpactSpeed) {
+      if (sourceSpeed < Math.min(TUNING.secondaryCrashMinImpactSpeed, TUNING.secondaryRearEndMinApproachSpeed)) {
         continue;
       }
 
@@ -664,30 +679,62 @@ export class NearMissGameLoop {
 
         const targetConfig = getVehicleConfig(target.vehicleConfigId);
         const targetPolygons = getVehicleCollisionPolygons(getTrafficVehicleTransform(target, targetConfig));
+        const previousSourceBounds = previousParticipantBoundsByKey.get(source.key);
+        const previousTargetBounds = previousTrafficBoundsById.get(target.id);
+        const sweptRearEndImpact =
+          previousSourceBounds && previousTargetBounds
+            ? getSweptRearEndImpact({
+                previousSource: previousSourceBounds,
+                currentSource: source.bounds,
+                previousTarget: previousTargetBounds,
+                currentTarget: target,
+                sourceVelocityY: source.motion.velocityY,
+                targetVelocityY: getTrafficScreenYSpeed(this.state.speed, target.currentWorldSpeed)
+              })
+            : null;
 
-        if (!doVehicleZonesOverlap(source.polygons, targetPolygons)) {
+        const hasOverlapImpact = doVehicleZonesOverlap(source.polygons, targetPolygons);
+
+        if (
+          (!hasOverlapImpact && !sweptRearEndImpact) ||
+          (hasOverlapImpact && !sweptRearEndImpact && sourceSpeed < TUNING.secondaryCrashMinImpactSpeed)
+        ) {
           continue;
         }
 
         const sourceCenter = getBoundsCenter(source.bounds);
         const targetCenter = getBoundsCenter(target);
-        const normal = normalizeVector(targetCenter.x - sourceCenter.x, targetCenter.y - sourceCenter.y, 0, -1);
+        const normal = sweptRearEndImpact?.normal || normalizeVector(targetCenter.x - sourceCenter.x, targetCenter.y - sourceCenter.y, 0, -1);
+        const impactSpeed = sweptRearEndImpact?.approachSpeed || sourceSpeed;
         const impulse = clamp(
-          sourceSpeed * TUNING.secondaryCrashImpulseScale,
+          impactSpeed * TUNING.secondaryCrashImpulseScale,
           TUNING.crashMinTrafficSlideImpulse,
           TUNING.secondaryCrashMaxImpulse
         );
-        const spinSign = Math.abs(normal.x) >= TUNING.crashSpinAxisThreshold ? (normal.x >= 0 ? 1 : -1) : source.motion.velocityX >= 0 ? 1 : -1;
+        const lateralOffsetRatio = clamp((targetCenter.x - sourceCenter.x) / Math.max(1, target.width), -1, 1);
+        const spinSign =
+          Math.abs(normal.x) >= TUNING.crashSpinAxisThreshold
+            ? normal.x >= 0
+              ? 1
+              : -1
+            : lateralOffsetRatio !== 0
+              ? Math.sign(lateralOffsetRatio)
+              : source.motion.velocityX >= 0
+                ? 1
+                : -1;
+        const rearEndLift = sweptRearEndImpact ? TUNING.crashScreenLiftImpulse * 0.12 : TUNING.crashScreenLiftImpulse * 0.25;
+        const rearEndForwardCarry = sweptRearEndImpact ? Math.max(0, source.motion.velocityY) * 0.35 : source.motion.velocityY * 0.45;
 
         crash.trafficMotionsById[target.id] = {
           offsetX: 0,
           offsetY: 0,
-          velocityX: normal.x * impulse + source.motion.velocityX * 0.35,
-          velocityY: normal.y * impulse * 0.35 + source.motion.velocityY * 0.45 - TUNING.crashScreenLiftImpulse * 0.25,
+          velocityX: normal.x * impulse + source.motion.velocityX * (sweptRearEndImpact ? 0.18 : 0.35),
+          velocityY: normal.y * impulse * (sweptRearEndImpact ? 0.62 : 0.35) + rearEndForwardCarry - rearEndLift,
           linearDamping: TUNING.crashLinearDamping * targetConfig.crashSlideResistance,
           yawDeg: 0,
           angularVelocityDeg:
-            (spinSign * (90 + sourceSpeed * TUNING.secondaryCrashSpinScale)) / targetConfig.crashSpinResistance
+            (spinSign * (90 + impactSpeed * TUNING.secondaryCrashSpinScale) * (sweptRearEndImpact ? Math.abs(lateralOffsetRatio) : 1)) /
+            targetConfig.crashSpinResistance
         };
         source.motion.velocityX *= TUNING.secondaryCrashDampingOnImpact;
         source.motion.velocityY *= TUNING.secondaryCrashDampingOnImpact;
@@ -699,7 +746,9 @@ export class NearMissGameLoop {
           targetId: target.id,
           normalX: normal.x,
           normalY: normal.y,
-          impactSpeed: sourceSpeed
+          impactSpeed,
+          impactType: sweptRearEndImpact ? "rear-end-swept" : "overlap",
+          lateralOverlap: sweptRearEndImpact?.lateralOverlap || getLateralOverlap(source.bounds, target)
         };
         break;
       }
@@ -713,6 +762,30 @@ export class NearMissGameLoop {
       y: this.state.player.y + crash.player.offsetY,
       visualYaw: this.state.player.visualYaw + crash.player.yawDeg
     };
+  }
+
+  private getCrashParticipantBounds(crash: CrashState): CrashParticipantBounds[] {
+    const participants: CrashParticipantBounds[] = [
+      {
+        key: "player",
+        bounds: this.getCrashAdjustedPlayerBounds(crash)
+      }
+    ];
+
+    for (const car of this.state.traffic) {
+      const motion = crash.trafficMotionsById[car.id];
+
+      if (!motion) {
+        continue;
+      }
+
+      participants.push({
+        key: car.id,
+        bounds: applyCrashMotionToBounds(car, motion)
+      });
+    }
+
+    return participants;
   }
 
   private getActiveTraffic() {
@@ -1222,6 +1295,54 @@ function applyCrashMotionToBounds<T extends { x: number; y: number }>(bounds: T,
     x: bounds.x + motion.offsetX,
     y: bounds.y + motion.offsetY
   };
+}
+
+function getSweptRearEndImpact({
+  previousSource,
+  currentSource,
+  previousTarget,
+  currentTarget,
+  sourceVelocityY,
+  targetVelocityY
+}: {
+  previousSource: CarBounds;
+  currentSource: CarBounds;
+  previousTarget: CarBounds;
+  currentTarget: CarBounds;
+  sourceVelocityY: number;
+  targetVelocityY: number;
+}) {
+  const lateralOverlap = Math.max(getLateralOverlap(previousSource, previousTarget), getLateralOverlap(currentSource, currentTarget));
+
+  if (lateralOverlap <= 0) {
+    return null;
+  }
+
+  const previousSourceFront = previousSource.y;
+  const currentSourceFront = currentSource.y;
+  const previousTargetRear = previousTarget.y + previousTarget.height;
+  const currentTargetRear = currentTarget.y + currentTarget.height;
+  const wasBehind = previousSourceFront >= previousTargetRear;
+  const crossedRear = currentSourceFront <= currentTargetRear;
+  const approachSpeed = Math.max(0, targetVelocityY - sourceVelocityY);
+
+  if (!wasBehind || !crossedRear || approachSpeed < TUNING.secondaryRearEndMinApproachSpeed) {
+    return null;
+  }
+
+  const sourceCenter = getBoundsCenter(currentSource);
+  const targetCenter = getBoundsCenter(currentTarget);
+  const lateralOffset = clamp((targetCenter.x - sourceCenter.x) / Math.max(1, currentTarget.width), -0.7, 0.7);
+
+  return {
+    normal: normalizeVector(lateralOffset, -1, 0, -1),
+    approachSpeed,
+    lateralOverlap
+  };
+}
+
+function getLateralOverlap(a: CarBounds, b: CarBounds) {
+  return Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
 }
 
 function normalizeVector(x: number, y: number, fallbackX: number, fallbackY: number) {

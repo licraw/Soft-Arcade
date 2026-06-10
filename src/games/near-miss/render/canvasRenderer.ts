@@ -196,7 +196,7 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
               `p ${Object.keys(state.crash.trafficMotionsById).length}`,
               `sec ${state.crash.secondaryImpactCount}`,
               state.crash.lastSecondaryImpact
-                ? `last ${state.crash.lastSecondaryImpact.source}->${state.crash.lastSecondaryImpact.targetId} ${state.crash.lastSecondaryImpact.impactSpeed.toFixed(0)}`
+                ? `last ${state.crash.lastSecondaryImpact.impactType} ${state.crash.lastSecondaryImpact.source}->${state.crash.lastSecondaryImpact.targetId} ${state.crash.lastSecondaryImpact.impactSpeed.toFixed(0)} lo ${state.crash.lastSecondaryImpact.lateralOverlap.toFixed(0)}`
                 : "",
               `m ${vehicleConfig.crashMass} sr ${vehicleConfig.crashSpinResistance}/${vehicleConfig.crashSlideResistance}`,
               `av ${state.crash.player.angularVelocityDeg.toFixed(0)}/${state.crash.trafficMotionsById[car.id].angularVelocityDeg.toFixed(0)}`

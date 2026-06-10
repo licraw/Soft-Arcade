@@ -143,6 +143,7 @@ export const NEAR_MISS_TUNING = {
   maxCrashParticipants: 4,
   maxSecondaryImpacts: 3,
   secondaryCrashMinImpactSpeed: 85,
+  secondaryRearEndMinApproachSpeed: 42,
   secondaryCrashImpulseScale: 0.58,
   secondaryCrashMaxImpulse: 260,
   secondaryCrashSpinScale: 0.72,
