@@ -75,6 +75,14 @@ export type CrashVehicleMotion = {
   angularVelocityDeg: number;
 };
 
+export type CrashSecondaryImpactDebug = {
+  source: "player" | number;
+  targetId: number;
+  normalX: number;
+  normalY: number;
+  impactSpeed: number;
+};
+
 export type CrashState = {
   age: number;
   duration: number;
@@ -87,7 +95,10 @@ export type CrashState = {
   hitVehicleClass: NearMissVehicleClass;
   spinSign: number;
   player: CrashVehicleMotion;
-  traffic: CrashVehicleMotion;
+  trafficMotionsById: Record<number, CrashVehicleMotion>;
+  secondaryImpactCount: number;
+  secondaryHitPairs: Record<string, true>;
+  lastSecondaryImpact: CrashSecondaryImpactDebug | null;
   roadSpeedAtImpact: number;
   minRoadSpeedRatio: number;
   finalMessage: string;
@@ -557,10 +568,10 @@ export class NearMissGameLoop {
     this.state.speed = getCrashRoadSpeed(crash);
     this.state.stripeOffset = (this.state.stripeOffset - this.state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
     this.updateCrashMotion(crash.player, delta);
-    this.updateCrashMotion(crash.traffic, delta);
+    Object.values(crash.trafficMotionsById).forEach((motion) => this.updateCrashMotion(motion, delta));
 
     for (const car of this.state.traffic) {
-      if (car.id === crash.hitTrafficId) {
+      if (crash.trafficMotionsById[car.id]) {
         continue;
       }
 
@@ -568,6 +579,7 @@ export class NearMissGameLoop {
       car.y += relativeYSpeed * delta;
     }
 
+    this.updateSecondaryCrashImpacts(crash);
     this.state.traffic = this.getActiveTraffic();
     this.state.feedbacks = this.state.feedbacks
       .map((feedback) => ({ ...feedback, age: feedback.age + delta }))
@@ -585,6 +597,122 @@ export class NearMissGameLoop {
     motion.velocityX *= Math.exp(-motion.linearDamping * delta);
     motion.velocityY *= Math.exp(-motion.linearDamping * delta);
     motion.angularVelocityDeg *= Math.exp(-TUNING.crashAngularDamping * delta);
+  }
+
+  private updateSecondaryCrashImpacts(crash: CrashState) {
+    if (
+      Object.keys(crash.trafficMotionsById).length >= TUNING.maxCrashParticipants ||
+      crash.secondaryImpactCount >= TUNING.maxSecondaryImpacts
+    ) {
+      return;
+    }
+
+    const playerBounds = this.getCrashAdjustedPlayerBounds(crash);
+    const sources: Array<{
+      key: "player" | number;
+      motion: CrashVehicleMotion;
+      bounds: CarBounds;
+      polygons: ReturnType<typeof getVehicleCollisionPolygons>;
+    }> = [
+      {
+        key: "player",
+        motion: crash.player,
+        bounds: playerBounds,
+        polygons: getVehicleCollisionPolygons(getPlayerVehicleTransform(playerBounds))
+      }
+    ];
+
+    for (const car of this.state.traffic) {
+      const motion = crash.trafficMotionsById[car.id];
+
+      if (!motion) {
+        continue;
+      }
+
+      const vehicleConfig = getVehicleConfig(car.vehicleConfigId);
+      const bounds = applyCrashMotionToBounds(car, motion);
+
+      sources.push({
+        key: car.id,
+        motion,
+        bounds,
+        polygons: getVehicleCollisionPolygons(getTrafficVehicleTransform(bounds, vehicleConfig, motion.yawDeg))
+      });
+    }
+
+    for (const source of sources) {
+      const sourceSpeed = Math.hypot(source.motion.velocityX, source.motion.velocityY);
+
+      if (sourceSpeed < TUNING.secondaryCrashMinImpactSpeed) {
+        continue;
+      }
+
+      for (const target of this.state.traffic) {
+        if (
+          crash.trafficMotionsById[target.id] ||
+          Object.keys(crash.trafficMotionsById).length >= TUNING.maxCrashParticipants ||
+          crash.secondaryImpactCount >= TUNING.maxSecondaryImpacts
+        ) {
+          continue;
+        }
+
+        const hitPairKey = `${source.key}:${target.id}`;
+
+        if (crash.secondaryHitPairs[hitPairKey]) {
+          continue;
+        }
+
+        const targetConfig = getVehicleConfig(target.vehicleConfigId);
+        const targetPolygons = getVehicleCollisionPolygons(getTrafficVehicleTransform(target, targetConfig));
+
+        if (!doVehicleZonesOverlap(source.polygons, targetPolygons)) {
+          continue;
+        }
+
+        const sourceCenter = getBoundsCenter(source.bounds);
+        const targetCenter = getBoundsCenter(target);
+        const normal = normalizeVector(targetCenter.x - sourceCenter.x, targetCenter.y - sourceCenter.y, 0, -1);
+        const impulse = clamp(
+          sourceSpeed * TUNING.secondaryCrashImpulseScale,
+          TUNING.crashMinTrafficSlideImpulse,
+          TUNING.secondaryCrashMaxImpulse
+        );
+        const spinSign = Math.abs(normal.x) >= TUNING.crashSpinAxisThreshold ? (normal.x >= 0 ? 1 : -1) : source.motion.velocityX >= 0 ? 1 : -1;
+
+        crash.trafficMotionsById[target.id] = {
+          offsetX: 0,
+          offsetY: 0,
+          velocityX: normal.x * impulse + source.motion.velocityX * 0.35,
+          velocityY: normal.y * impulse * 0.35 + source.motion.velocityY * 0.45 - TUNING.crashScreenLiftImpulse * 0.25,
+          linearDamping: TUNING.crashLinearDamping * targetConfig.crashSlideResistance,
+          yawDeg: 0,
+          angularVelocityDeg:
+            (spinSign * (90 + sourceSpeed * TUNING.secondaryCrashSpinScale)) / targetConfig.crashSpinResistance
+        };
+        source.motion.velocityX *= TUNING.secondaryCrashDampingOnImpact;
+        source.motion.velocityY *= TUNING.secondaryCrashDampingOnImpact;
+        source.motion.angularVelocityDeg *= 0.88;
+        crash.secondaryHitPairs[hitPairKey] = true;
+        crash.secondaryImpactCount += 1;
+        crash.lastSecondaryImpact = {
+          source: source.key,
+          targetId: target.id,
+          normalX: normal.x,
+          normalY: normal.y,
+          impactSpeed: sourceSpeed
+        };
+        break;
+      }
+    }
+  }
+
+  private getCrashAdjustedPlayerBounds(crash: CrashState) {
+    return {
+      ...this.state.player,
+      x: this.state.player.x + crash.player.offsetX,
+      y: this.state.player.y + crash.player.offsetY,
+      visualYaw: this.state.player.visualYaw + crash.player.yawDeg
+    };
   }
 
   private getActiveTraffic() {
@@ -791,6 +919,9 @@ export class NearMissGameLoop {
       relativeSpeedAtImpact,
       hitVehicleClass: hitVehicleConfig.vehicleClass,
       spinSign: sideSign,
+      secondaryImpactCount: 0,
+      secondaryHitPairs: {},
+      lastSecondaryImpact: null,
       roadSpeedAtImpact: this.state.speed,
       minRoadSpeedRatio,
       finalMessage: runEndMessage,
@@ -803,14 +934,16 @@ export class NearMissGameLoop {
         yawDeg: 0,
         angularVelocityDeg: sideSign * (220 + TUNING.playerSpinIntensity * relativeSpeedRatio) + this.state.player.lateralVelocity * 95
       },
-      traffic: {
-        offsetX: 0,
-        offsetY: 0,
-        velocityX: -normal.x * trafficImpulseX + playerLateralPixels * 0.32,
-        velocityY: -screenLift * 0.72 - trafficImpulseY * 0.28 + relativeYSpeed * 0.12,
-        linearDamping: trafficLinearDamping,
-        yawDeg: 0,
-        angularVelocityDeg: (-sideSign * (150 + TUNING.trafficSpinIntensity * relativeSpeedRatio)) / hitVehicleConfig.crashSpinResistance
+      trafficMotionsById: {
+        [hitCar.id]: {
+          offsetX: 0,
+          offsetY: 0,
+          velocityX: -normal.x * trafficImpulseX + playerLateralPixels * 0.32,
+          velocityY: -screenLift * 0.72 - trafficImpulseY * 0.28 + relativeYSpeed * 0.12,
+          linearDamping: trafficLinearDamping,
+          yawDeg: 0,
+          angularVelocityDeg: (-sideSign * (150 + TUNING.trafficSpinIntensity * relativeSpeedRatio)) / hitVehicleConfig.crashSpinResistance
+        }
       }
     };
     this.emitSnapshot();
@@ -1080,6 +1213,14 @@ function getBoundsCenter(bounds: CarBounds) {
   return {
     x: bounds.x + bounds.width / 2,
     y: bounds.y + bounds.height / 2
+  };
+}
+
+function applyCrashMotionToBounds<T extends { x: number; y: number }>(bounds: T, motion: CrashVehicleMotion): T {
+  return {
+    ...bounds,
+    x: bounds.x + motion.offsetX,
+    y: bounds.y + motion.offsetY
   };
 }
 

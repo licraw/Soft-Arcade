@@ -186,16 +186,23 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.fillText(
       [
         `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg`,
-        state.crash?.hitTrafficId === car.id
+        state.crash?.trafficMotionsById[car.id]
           ? [
               `hit ${state.crash.hitVehicleClass}`,
               state.crash.impactType,
               `n ${state.crash.normalX.toFixed(2)},${state.crash.normalY.toFixed(2)}`,
               `spin ${state.crash.spinSign}`,
               `rel ${(state.crash.relativeSpeedAtImpact / TUNING.displayedSpeedDivisor).toFixed(0)}`,
+              `p ${Object.keys(state.crash.trafficMotionsById).length}`,
+              `sec ${state.crash.secondaryImpactCount}`,
+              state.crash.lastSecondaryImpact
+                ? `last ${state.crash.lastSecondaryImpact.source}->${state.crash.lastSecondaryImpact.targetId} ${state.crash.lastSecondaryImpact.impactSpeed.toFixed(0)}`
+                : "",
               `m ${vehicleConfig.crashMass} sr ${vehicleConfig.crashSpinResistance}/${vehicleConfig.crashSlideResistance}`,
-              `av ${state.crash.player.angularVelocityDeg.toFixed(0)}/${state.crash.traffic.angularVelocityDeg.toFixed(0)}`
-            ].join(" ")
+              `av ${state.crash.player.angularVelocityDeg.toFixed(0)}/${state.crash.trafficMotionsById[car.id].angularVelocityDeg.toFixed(0)}`
+            ]
+              .filter(Boolean)
+              .join(" ")
           : "",
         `${car.packetId} c${car.corridorLane}`,
         `v ${formatTrafficDebugSpeed(car.currentWorldSpeed)}/${formatTrafficDebugSpeed(car.desiredWorldSpeed)}`,
@@ -230,7 +237,7 @@ function formatTrafficDebugSpeed(speed: number) {
 }
 
 function getTrafficCrashMotion(state: NearMissRuntimeState, trafficId: number) {
-  return state.crash?.hitTrafficId === trafficId ? state.crash.traffic : null;
+  return state.crash?.trafficMotionsById[trafficId] || null;
 }
 
 function applyCrashMotion<T extends { x: number; y: number }>(bounds: T, crashMotion: CrashVehicleMotion | null): T {
