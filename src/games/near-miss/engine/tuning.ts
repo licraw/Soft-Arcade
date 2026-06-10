@@ -54,6 +54,7 @@ export const NEAR_MISS_TUNING = {
   laneSpawnMinGapCars: 0.75,
   laneSpawnMinGapPx: 32,
   laneOffsetAmount: 0.18,
+  edgeLaneInwardBias: 0.1,
   corridorShiftFrequency: 3.5,
   spawnBlockedLaneLookaheadCars: 2.2,
   spawnIntervalFloor: 0.58,

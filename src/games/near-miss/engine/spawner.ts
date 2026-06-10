@@ -169,7 +169,8 @@ export function spawnTrafficPacket(options: SpawnOptions) {
     );
     const width = trafficBody.width;
     const height = trafficBody.height;
-    const readableOffset = clamp(packetCar.lateralOffset || getSubtleLaneOffset(elapsed, index), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
+    const baseLateralOffset = packetCar.lateralOffset ?? getSubtleLaneOffset(elapsed, index);
+    const readableOffset = getReadableLaneOffset(baseLateralOffset, lane, laneSystem.lanes);
     const x = getLaneCenter(laneSystem, lane) + readableOffset * laneSystem.laneWidth - width / 2;
     const cruiseMph = TUNING.trafficMinCruiseMph + Math.random() * (TUNING.trafficMaxCruiseMph - TUNING.trafficMinCruiseMph);
     const cruiseWorldSpeed = internalSpeedFromMph(cruiseMph);
@@ -331,6 +332,22 @@ function getSubtleLaneOffset(elapsed: number, index: number) {
   const phase = Math.sin(elapsed * TUNING.subtleLaneOffsetFrequency + index * TUNING.subtleLaneOffsetPhaseStep);
 
   return phase * TUNING.laneOffsetAmount * TUNING.subtleLaneOffsetScale;
+}
+
+function getReadableLaneOffset(baseLateralOffset: number, lane: number, laneCount: number) {
+  return clamp(baseLateralOffset + getEdgeLaneInwardBias(lane, laneCount), -TUNING.laneOffsetAmount, TUNING.laneOffsetAmount);
+}
+
+function getEdgeLaneInwardBias(lane: number, laneCount: number) {
+  if (lane === 0) {
+    return TUNING.edgeLaneInwardBias;
+  }
+
+  if (lane === laneCount - 1) {
+    return -TUNING.edgeLaneInwardBias;
+  }
+
+  return 0;
 }
 
 function clamp(value: number, min: number, max: number) {
