@@ -63,6 +63,7 @@ type PlayerCar = CarBounds & {
 };
 
 export type CrashImpactSide = "front" | "rear" | "left" | "right" | "center";
+export type CrashImpactType = "rear-clip" | "front-rear-end" | "side-swipe-left" | "side-swipe-right" | "corner-clip" | "truck-impact";
 
 export type CrashVehicleMotion = {
   offsetX: number;
@@ -81,8 +82,10 @@ export type CrashState = {
   normalX: number;
   normalY: number;
   impactSide: CrashImpactSide;
+  impactType: CrashImpactType;
   relativeSpeedAtImpact: number;
   hitVehicleClass: NearMissVehicleClass;
+  spinSign: number;
   player: CrashVehicleMotion;
   traffic: CrashVehicleMotion;
   roadSpeedAtImpact: number;
@@ -732,21 +735,42 @@ export class NearMissGameLoop {
     const trafficCenter = getBoundsCenter(hitCar);
     const normal = normalizeVector(playerCenter.x - trafficCenter.x, playerCenter.y - trafficCenter.y, 0, -1);
     const impactSide = getImpactSide(normal.x, normal.y);
+    const impactType = getCrashImpactType(normal.x, normal.y, hitVehicleConfig.vehicleClass);
     const relativeSpeedAtImpact = Math.abs(this.state.speed - hitCar.currentWorldSpeed);
     const relativeSpeedRatio = clamp(relativeSpeedAtImpact / TUNING.crashMaxRelativeSpeed, TUNING.crashSpeedRatioFloor, 1);
     const momentumRatio = getCrashMomentumRatio(this.state.speed);
-    const sideSign = getCrashSpinSideSign(normal.x, this.state.player.lateralVelocity);
+    const sideSign = getCrashSpinSideSign({
+      normalX: normal.x,
+      normalY: normal.y,
+      impactType,
+      lateralVelocity: this.state.player.lateralVelocity,
+      contactOffsetX: trafficCenter.x - playerCenter.x
+    });
     const playerLateralPixels = this.state.player.lateralVelocity * this.state.laneSystem.laneWidth;
     const impactAngle = Math.atan2(Math.abs(normal.x), Math.max(normal.y, 0));
     const rearFactor = Math.pow(Math.cos(impactAngle), 0.6);
     const sideFactor = Math.pow(Math.sin(impactAngle), 0.7);
-    const playerImpulseX = TUNING.playerCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor * hitVehicleConfig.crashMass;
-    const playerImpulseY = TUNING.playerCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor * hitVehicleConfig.crashMass;
-    const trafficImpulseX = TUNING.trafficCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor;
-    const trafficImpulseY = TUNING.trafficCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor;
+    const playerImpulseX = Math.max(
+      TUNING.crashMinPlayerSlideImpulse * sideFactor,
+      TUNING.playerCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor * hitVehicleConfig.crashMass
+    );
+    const playerImpulseY = Math.max(
+      TUNING.crashMinPlayerSlideImpulse * rearFactor,
+      TUNING.playerCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor * hitVehicleConfig.crashMass
+    );
+    const trafficImpulseX = Math.max(
+      TUNING.crashMinTrafficSlideImpulse * sideFactor,
+      TUNING.trafficCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor
+    );
+    const trafficImpulseY = Math.max(
+      TUNING.crashMinTrafficSlideImpulse * rearFactor,
+      TUNING.trafficCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor
+    );
+    const screenLift = TUNING.crashScreenLiftImpulse * (0.55 + relativeSpeedRatio);
     const crashDuration = lerp(TUNING.crashDurationLowSpeed, TUNING.crashDurationHighSpeed, relativeSpeedRatio);
     const minRoadSpeedRatio = lerp(TUNING.crashMinRoadSpeedRatioLowSpeed, TUNING.crashMinRoadSpeedRatioHighSpeed, momentumRatio);
     const trafficLinearDamping = TUNING.crashLinearDamping * hitVehicleConfig.crashSlideResistance;
+    const rearClipBoost = impactType === "rear-clip" ? 1.35 : 1;
 
     this.state.status = "crashing";
     this.state.message = runEndMessage;
@@ -763,28 +787,30 @@ export class NearMissGameLoop {
       normalX: normal.x,
       normalY: normal.y,
       impactSide,
+      impactType,
       relativeSpeedAtImpact,
       hitVehicleClass: hitVehicleConfig.vehicleClass,
+      spinSign: sideSign,
       roadSpeedAtImpact: this.state.speed,
       minRoadSpeedRatio,
       finalMessage: runEndMessage,
       player: {
         offsetX: 0,
         offsetY: 0,
-        velocityX: playerLateralPixels * 0.55 + normal.x * playerImpulseX,
-        velocityY: normal.y * playerImpulseY - 70 * relativeSpeedRatio,
+        velocityX: playerLateralPixels * 0.7 + normal.x * playerImpulseX * rearClipBoost,
+        velocityY: normal.y * playerImpulseY * 0.45 - screenLift,
         linearDamping: TUNING.crashLinearDamping,
         yawDeg: 0,
-        angularVelocityDeg: sideSign * (180 + TUNING.playerSpinIntensity * relativeSpeedRatio) + this.state.player.lateralVelocity * 80
+        angularVelocityDeg: sideSign * (220 + TUNING.playerSpinIntensity * relativeSpeedRatio) + this.state.player.lateralVelocity * 95
       },
       traffic: {
         offsetX: 0,
         offsetY: 0,
-        velocityX: -normal.x * trafficImpulseX + playerLateralPixels * 0.25,
-        velocityY: relativeYSpeed * (0.32 + rearFactor * 0.38) + trafficImpulseY + Math.max(40, this.state.speed * 0.08),
+        velocityX: -normal.x * trafficImpulseX + playerLateralPixels * 0.32,
+        velocityY: -screenLift * 0.72 - trafficImpulseY * 0.28 + relativeYSpeed * 0.12,
         linearDamping: trafficLinearDamping,
         yawDeg: 0,
-        angularVelocityDeg: (-sideSign * (120 + TUNING.trafficSpinIntensity * relativeSpeedRatio)) / hitVehicleConfig.crashSpinResistance
+        angularVelocityDeg: (-sideSign * (150 + TUNING.trafficSpinIntensity * relativeSpeedRatio)) / hitVehicleConfig.crashSpinResistance
       }
     };
     this.emitSnapshot();
@@ -978,7 +1004,57 @@ function getCrashRoadSpeed(crash: CrashState) {
   return Math.max(minRoadSpeed, phase1Speed * Math.exp(-TUNING.crashRoadPhase2SlowdownRate * phase2Age));
 }
 
-function getCrashSpinSideSign(normalX: number, lateralVelocity: number) {
+function getCrashImpactType(normalX: number, normalY: number, hitVehicleClass: NearMissVehicleClass): CrashImpactType {
+  if (hitVehicleClass === "van-truck") {
+    return "truck-impact";
+  }
+
+  if (normalY < TUNING.crashRearClipThreshold) {
+    return "rear-clip";
+  }
+
+  if (normalY > Math.abs(normalX)) {
+    return "front-rear-end";
+  }
+
+  if (Math.abs(normalX) > Math.abs(normalY) + TUNING.crashCornerBlendThreshold) {
+    return normalX > 0 ? "side-swipe-right" : "side-swipe-left";
+  }
+
+  return "corner-clip";
+}
+
+function getCrashSpinSideSign({
+  normalX,
+  normalY,
+  impactType,
+  lateralVelocity,
+  contactOffsetX
+}: {
+  normalX: number;
+  normalY: number;
+  impactType: CrashImpactType;
+  lateralVelocity: number;
+  contactOffsetX: number;
+}) {
+  if (impactType === "rear-clip") {
+    const lateralSign = Math.sign(lateralVelocity);
+
+    if (lateralSign !== 0) {
+      return lateralSign;
+    }
+
+    const contactSign = Math.sign(contactOffsetX);
+
+    if (contactSign !== 0) {
+      return -contactSign;
+    }
+  }
+
+  if (Math.abs(normalY) > Math.abs(normalX) && Math.abs(contactOffsetX) > 1) {
+    return -Math.sign(contactOffsetX);
+  }
+
   if (Math.abs(normalX) >= TUNING.crashSpinAxisThreshold) {
     return normalX >= 0 ? 1 : -1;
   }

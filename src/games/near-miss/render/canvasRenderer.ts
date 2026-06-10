@@ -187,7 +187,15 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
       [
         `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg`,
         state.crash?.hitTrafficId === car.id
-          ? `hit ${state.crash.hitVehicleClass} rel ${(state.crash.relativeSpeedAtImpact / TUNING.displayedSpeedDivisor).toFixed(0)}`
+          ? [
+              `hit ${state.crash.hitVehicleClass}`,
+              state.crash.impactType,
+              `n ${state.crash.normalX.toFixed(2)},${state.crash.normalY.toFixed(2)}`,
+              `spin ${state.crash.spinSign}`,
+              `rel ${(state.crash.relativeSpeedAtImpact / TUNING.displayedSpeedDivisor).toFixed(0)}`,
+              `m ${vehicleConfig.crashMass} sr ${vehicleConfig.crashSpinResistance}/${vehicleConfig.crashSlideResistance}`,
+              `av ${state.crash.player.angularVelocityDeg.toFixed(0)}/${state.crash.traffic.angularVelocityDeg.toFixed(0)}`
+            ].join(" ")
           : "",
         `${car.packetId} c${car.corridorLane}`,
         `v ${formatTrafficDebugSpeed(car.currentWorldSpeed)}/${formatTrafficDebugSpeed(car.desiredWorldSpeed)}`,

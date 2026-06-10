@@ -104,9 +104,9 @@ export const NEAR_MISS_VEHICLE_CONFIGS = [
     occupancyLengthScale: 1.28,
     nearMissGrowX: 16,
     nearMissGrowY: 13,
-    crashMass: 1.9,
-    crashSpinResistance: 3.2,
-    crashSlideResistance: 1.6,
+    crashMass: 1.75,
+    crashSpinResistance: 2.55,
+    crashSlideResistance: 1.18,
     collisionZones: [
       { id: "cargo-box", x: 0, y: 0.18, width: 0.68, height: 0.58 },
       { id: "cab", x: 0, y: -0.28, width: 0.56, height: 0.31 },
