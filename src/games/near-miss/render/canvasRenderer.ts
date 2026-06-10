@@ -186,10 +186,15 @@ function drawDebugOverlays(ctx: CanvasRenderingContext2D, state: NearMissRuntime
     ctx.fillText(
       [
         `${vehicleConfig.label} / ${vehicleConfig.vehicleClass} / yaw ${(crashMotion?.yawDeg || 0).toFixed(1)}deg`,
+        state.crash?.hitTrafficId === car.id
+          ? `hit ${state.crash.hitVehicleClass} rel ${(state.crash.relativeSpeedAtImpact / TUNING.displayedSpeedDivisor).toFixed(0)}`
+          : "",
         `${car.packetId} c${car.corridorLane}`,
         `v ${formatTrafficDebugSpeed(car.currentWorldSpeed)}/${formatTrafficDebugSpeed(car.desiredWorldSpeed)}`,
         `b ${car.blockedById ?? "-"} g ${car.followingGapPx === null ? "-" : car.followingGapPx.toFixed(0)}${car.emergencyCorrected ? " !" : ""}`
-      ].join(" / "),
+      ]
+        .filter(Boolean)
+        .join(" / "),
       trafficBounds.x,
       Math.max(12, trafficBounds.y - 4)
     );

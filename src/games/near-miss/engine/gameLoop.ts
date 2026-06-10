@@ -22,7 +22,7 @@ import {
   getVehicleNearMissPolygons,
   isVehicleNearMissOverlap
 } from "./vehicleGeometry";
-import { getVehicleConfig } from "./vehicleConfig";
+import { getVehicleConfig, type NearMissVehicleClass } from "./vehicleConfig";
 import { renderNearMiss } from "../render/canvasRenderer";
 
 type GameStatus = "ready" | "running" | "crashing" | "gameOver";
@@ -69,6 +69,7 @@ export type CrashVehicleMotion = {
   offsetY: number;
   velocityX: number;
   velocityY: number;
+  linearDamping: number;
   yawDeg: number;
   angularVelocityDeg: number;
 };
@@ -80,10 +81,11 @@ export type CrashState = {
   normalX: number;
   normalY: number;
   impactSide: CrashImpactSide;
+  relativeSpeedAtImpact: number;
+  hitVehicleClass: NearMissVehicleClass;
   player: CrashVehicleMotion;
   traffic: CrashVehicleMotion;
   roadSpeedAtImpact: number;
-  roadSlowdownRate: number;
   minRoadSpeedRatio: number;
   finalMessage: string;
 };
@@ -549,10 +551,7 @@ export class NearMissGameLoop {
     }
 
     crash.age += delta;
-    this.state.speed = Math.max(
-      crash.roadSpeedAtImpact * crash.minRoadSpeedRatio,
-      this.state.speed * Math.exp(-crash.roadSlowdownRate * delta)
-    );
+    this.state.speed = getCrashRoadSpeed(crash);
     this.state.stripeOffset = (this.state.stripeOffset - this.state.speed * delta * TUNING.stripeSpeedScale) % TUNING.stripeRepeatDistance;
     this.updateCrashMotion(crash.player, delta);
     this.updateCrashMotion(crash.traffic, delta);
@@ -580,8 +579,8 @@ export class NearMissGameLoop {
     motion.offsetX += motion.velocityX * delta;
     motion.offsetY += motion.velocityY * delta;
     motion.yawDeg += motion.angularVelocityDeg * delta;
-    motion.velocityX *= Math.exp(-TUNING.crashLinearDamping * delta);
-    motion.velocityY *= Math.exp(-TUNING.crashLinearDamping * delta);
+    motion.velocityX *= Math.exp(-motion.linearDamping * delta);
+    motion.velocityY *= Math.exp(-motion.linearDamping * delta);
     motion.angularVelocityDeg *= Math.exp(-TUNING.crashAngularDamping * delta);
   }
 
@@ -728,18 +727,26 @@ export class NearMissGameLoop {
   private startCrash(hitCar: TrafficCar, relativeYSpeed: number) {
     const runEndMessage = chooseRunEndMessage(this.lastRunEndMessage);
     this.lastRunEndMessage = runEndMessage;
+    const hitVehicleConfig = getVehicleConfig(hitCar.vehicleConfigId);
     const playerCenter = getBoundsCenter(this.state.player);
     const trafficCenter = getBoundsCenter(hitCar);
     const normal = normalizeVector(playerCenter.x - trafficCenter.x, playerCenter.y - trafficCenter.y, 0, -1);
     const impactSide = getImpactSide(normal.x, normal.y);
-    const speedRatio = clamp(this.state.speed / TUNING.maxSpeed, 0.35, 1);
+    const relativeSpeedAtImpact = Math.abs(this.state.speed - hitCar.currentWorldSpeed);
+    const relativeSpeedRatio = clamp(relativeSpeedAtImpact / TUNING.crashMaxRelativeSpeed, TUNING.crashSpeedRatioFloor, 1);
     const momentumRatio = getCrashMomentumRatio(this.state.speed);
-    const sideSign = normal.x >= 0 ? 1 : -1;
+    const sideSign = getCrashSpinSideSign(normal.x, this.state.player.lateralVelocity);
     const playerLateralPixels = this.state.player.lateralVelocity * this.state.laneSystem.laneWidth;
-    const rearEndFactor = normal.y > 0.35 ? 1.2 : 0.85;
-    const crashDuration = lerp(TUNING.crashDurationLowSpeed, TUNING.crashDurationHighSpeed, momentumRatio);
-    const roadSlowdownRate = lerp(TUNING.crashRoadSlowdownRateLowSpeed, TUNING.crashRoadSlowdownRateHighSpeed, momentumRatio);
+    const impactAngle = Math.atan2(Math.abs(normal.x), Math.max(normal.y, 0));
+    const rearFactor = Math.pow(Math.cos(impactAngle), 0.6);
+    const sideFactor = Math.pow(Math.sin(impactAngle), 0.7);
+    const playerImpulseX = TUNING.playerCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor * hitVehicleConfig.crashMass;
+    const playerImpulseY = TUNING.playerCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor * hitVehicleConfig.crashMass;
+    const trafficImpulseX = TUNING.trafficCrashImpulse * relativeSpeedRatio * sideFactor * TUNING.crashSideFactor;
+    const trafficImpulseY = TUNING.trafficCrashImpulse * relativeSpeedRatio * rearFactor * TUNING.crashRearFactor;
+    const crashDuration = lerp(TUNING.crashDurationLowSpeed, TUNING.crashDurationHighSpeed, relativeSpeedRatio);
     const minRoadSpeedRatio = lerp(TUNING.crashMinRoadSpeedRatioLowSpeed, TUNING.crashMinRoadSpeedRatioHighSpeed, momentumRatio);
+    const trafficLinearDamping = TUNING.crashLinearDamping * hitVehicleConfig.crashSlideResistance;
 
     this.state.status = "crashing";
     this.state.message = runEndMessage;
@@ -756,25 +763,28 @@ export class NearMissGameLoop {
       normalX: normal.x,
       normalY: normal.y,
       impactSide,
+      relativeSpeedAtImpact,
+      hitVehicleClass: hitVehicleConfig.vehicleClass,
       roadSpeedAtImpact: this.state.speed,
-      roadSlowdownRate,
       minRoadSpeedRatio,
       finalMessage: runEndMessage,
       player: {
         offsetX: 0,
         offsetY: 0,
-        velocityX: playerLateralPixels * 0.55 + normal.x * TUNING.playerCrashImpulse * speedRatio,
-        velocityY: -90 * speedRatio + normal.y * 90,
+        velocityX: playerLateralPixels * 0.55 + normal.x * playerImpulseX,
+        velocityY: normal.y * playerImpulseY - 70 * relativeSpeedRatio,
+        linearDamping: TUNING.crashLinearDamping,
         yawDeg: 0,
-        angularVelocityDeg: sideSign * (180 + TUNING.playerSpinIntensity * speedRatio) + this.state.player.lateralVelocity * 80
+        angularVelocityDeg: sideSign * (180 + TUNING.playerSpinIntensity * relativeSpeedRatio) + this.state.player.lateralVelocity * 80
       },
       traffic: {
         offsetX: 0,
         offsetY: 0,
-        velocityX: -normal.x * TUNING.trafficCrashImpulse * speedRatio + playerLateralPixels * 0.25,
-        velocityY: relativeYSpeed * 0.55 * rearEndFactor + Math.max(60, this.state.speed * 0.12),
+        velocityX: -normal.x * trafficImpulseX + playerLateralPixels * 0.25,
+        velocityY: relativeYSpeed * (0.32 + rearFactor * 0.38) + trafficImpulseY + Math.max(40, this.state.speed * 0.08),
+        linearDamping: trafficLinearDamping,
         yawDeg: 0,
-        angularVelocityDeg: -sideSign * (120 + TUNING.trafficSpinIntensity * speedRatio)
+        angularVelocityDeg: (-sideSign * (120 + TUNING.trafficSpinIntensity * relativeSpeedRatio)) / hitVehicleConfig.crashSpinResistance
       }
     };
     this.emitSnapshot();
@@ -950,6 +960,36 @@ function getTrafficScreenYSpeed(playerWorldSpeed: number, trafficWorldSpeed: num
   const shapedPullAwaySpeed = maxPullAwaySpeed * (1 - Math.exp(-adjustedPullAwaySpeed / pullAwayCurveScale));
 
   return -Math.min(pullAwaySpeed, shapedPullAwaySpeed);
+}
+
+function getCrashRoadSpeed(crash: CrashState) {
+  const minRoadSpeed = crash.roadSpeedAtImpact * crash.minRoadSpeedRatio;
+  const phase1Duration = TUNING.crashRoadPhase1Duration;
+
+  if (crash.age <= phase1Duration) {
+    const phase1Rate = -Math.log(TUNING.crashRoadPhase1TargetRatio) / phase1Duration;
+
+    return Math.max(minRoadSpeed, crash.roadSpeedAtImpact * Math.exp(-phase1Rate * crash.age));
+  }
+
+  const phase2Age = crash.age - phase1Duration;
+  const phase1Speed = crash.roadSpeedAtImpact * TUNING.crashRoadPhase1TargetRatio;
+
+  return Math.max(minRoadSpeed, phase1Speed * Math.exp(-TUNING.crashRoadPhase2SlowdownRate * phase2Age));
+}
+
+function getCrashSpinSideSign(normalX: number, lateralVelocity: number) {
+  if (Math.abs(normalX) >= TUNING.crashSpinAxisThreshold) {
+    return normalX >= 0 ? 1 : -1;
+  }
+
+  const lateralSign = Math.sign(lateralVelocity);
+
+  if (lateralSign !== 0) {
+    return lateralSign;
+  }
+
+  return Math.random() < 0.5 ? -1 : 1;
 }
 
 function lerp(start: number, end: number, amount: number) {
