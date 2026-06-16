@@ -23,7 +23,7 @@ Years later, I came back to that project. I did not want to turn it into somethi
 
 That became Beat the Scrambler.
 
-[IMAGE: Original puzzle board]
+![Original Beat the Scrambler puzzle board](/labs/bts-original-puzzle-board.png)
 
 That experiment eventually became the start of Soft Arcade: lightweight browser-native games that are quick to load, easy to understand, and playable without accounts or installs. Old side projects can be useful raw material for that kind of work. They already contain something real: a mechanic, a constraint, a little proof that an interaction feels good enough to keep.
 
@@ -67,7 +67,7 @@ function scramble() {
 
 The `do...while` guard handles the rare case where the random walk comes back to the solved state. If it does, the game simply scrambles again.
 
-[DIAGRAM: Solvable scramble algorithm]
+![Solvable scramble algorithm diagram](/labs/beat-the-scrambler-origin/solvable-scramble-algorithm.png)
 
 The number of scramble moves scales with difficulty:
 
@@ -180,7 +180,7 @@ The original puzzle had no character. It was just numbers.
 
 That was fine for a college project, but Soft Arcade needed the game to have a little attitude. The mechanic is about restoring order after chaos, so the obvious antagonist was the thing that creates the chaos: the Scrambler.
 
-[IMAGE: Scrambler mascot]
+![Scrambler mascot](/labs/beat-the-scrambler-origin/scrambler-mascot.svg)
 
 The Scrambler is implemented entirely as inline SVG returned by `getScramblerMarkup()` in `mountBeatTheScrambler.js`. There are no image assets involved:
 
@@ -335,6 +335,6 @@ It was also the first Soft Arcade game in a practical sense. The platform exists
 
 That is the Soft Arcade mission in miniature. Build browser-native games that are lightweight, readable, and quick to play. Learn through building. Keep the experience small enough to load instantly, but complete enough to feel intentional.
 
-[IMAGE: Beat the Scrambler gameplay]
+![Beat the Scrambler gameplay](/labs/beat-the-scrambler-origin/beat-the-scrambler-gameplay.png)
 
 Play Beat the Scrambler.
