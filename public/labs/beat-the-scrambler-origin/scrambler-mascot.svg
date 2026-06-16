@@ -1,0 +1,109 @@
+<svg viewBox="-28 0 176 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="scrambler-title">
+  <title id="scrambler-title">Scrambler mascot</title>
+  <style>
+    svg {
+      color: #00e5ff;
+      overflow: visible;
+    }
+
+    .scrambler-face {
+      fill: rgba(10, 12, 18, 0.96);
+      stroke: rgba(0, 229, 255, 0.42);
+      stroke-width: 1.5;
+    }
+
+    .scrambler-brow,
+    .scrambler-limb,
+    .scrambler-hand,
+    .scrambler-mouth-accent {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .scrambler-brow {
+      stroke: #ff2ed1;
+      stroke-width: 2.2;
+    }
+
+    .scrambler-eye {
+      fill: #00e5ff;
+    }
+
+    .scrambler-pupil {
+      fill: rgba(11, 11, 15, 0.95);
+    }
+
+    .scrambler-mouth {
+      fill: none;
+      stroke: #ff2ed1;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+    }
+
+    .scrambler-mouth-accent {
+      stroke: rgba(255, 212, 0, 0.9);
+      stroke-width: 1.8;
+    }
+
+    .scrambler-limb {
+      stroke: rgba(0, 229, 255, 0.78);
+      stroke-width: 3;
+    }
+
+    .scrambler-hand {
+      stroke: rgba(255, 46, 209, 0.92);
+      stroke-width: 2.4;
+    }
+
+    .scrambler-horn,
+    .scrambler-glitch-bar {
+      stroke: currentColor;
+      stroke-linecap: round;
+    }
+
+    .scrambler-horn {
+      stroke-width: 2.2;
+    }
+
+    .scrambler-glitch-bar {
+      stroke-width: 3;
+      opacity: 0.7;
+    }
+
+    .scrambler-glitch-bar.is-magenta {
+      stroke: #ff2ed1;
+    }
+
+    .scrambler-arms {
+      opacity: 0.78;
+      transform: scale(0.84);
+      transform-origin: 50% 58%;
+    }
+  </style>
+  <g class="scrambler-arms">
+    <g class="scrambler-arm scrambler-arm-left">
+      <path class="scrambler-limb" d="M29 59 C14 58, -6 68, -8 88 C-10 101, 4 108, 26 97" />
+      <path class="scrambler-hand" d="M20 96 L5 104 M20 93 L0 93 M21 90 L6 82" />
+    </g>
+    <g class="scrambler-arm scrambler-arm-right">
+      <path class="scrambler-limb" d="M91 59 C106 58, 126 68, 128 88 C130 101, 116 108, 94 97" />
+      <path class="scrambler-hand" d="M100 96 L115 104 M100 93 L120 93 M99 90 L114 82" />
+    </g>
+  </g>
+  <line class="scrambler-horn" x1="41" y1="22" x2="34" y2="12" />
+  <line class="scrambler-horn" x1="79" y1="22" x2="86" y2="12" />
+  <line class="scrambler-glitch-bar" x1="15" y1="42" x2="29" y2="42" />
+  <line class="scrambler-glitch-bar is-magenta" x1="89" y1="34" x2="104" y2="34" />
+  <line class="scrambler-glitch-bar" x1="92" y1="76" x2="107" y2="76" />
+  <line class="scrambler-glitch-bar is-magenta" x1="19" y1="84" x2="33" y2="84" />
+  <path class="scrambler-face" d="M60 16 L92 34 L102 60 L92 88 L60 104 L28 88 L18 60 L28 34 Z" />
+  <path class="scrambler-brow" d="M34 44 L53 39" />
+  <path class="scrambler-brow" d="M86 44 L67 39" />
+  <path class="scrambler-eye" d="M38 53 L52 47 L49 61 L34 62 Z" />
+  <path class="scrambler-eye" d="M82 51 L68 47 L71 60 L86 60 Z" />
+  <circle class="scrambler-pupil" cx="46" cy="55" r="2.4" />
+  <circle class="scrambler-pupil" cx="75" cy="54" r="2.1" />
+  <path class="scrambler-mouth" d="M42 75 C48 72, 52 81, 58 78 C65 74, 68 85, 78 72" />
+  <path class="scrambler-mouth-accent" d="M44 80 L50 78" />
+</svg>
