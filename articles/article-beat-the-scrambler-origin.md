@@ -1,16 +1,31 @@
+---
+title: "Beat the Scrambler: From a College jQuery Project to a Modern Browser Game"
+description: "How an old jQuery sliding puzzle became the first Soft Arcade browser game and shaped the platform around it."
+slug: "beat-the-scrambler-origin"
+publishedAt: "2026-06-16"
+updatedAt: "2026-06-16"
+category: "Devlog"
+tags:
+  - Browser Games
+  - JavaScript
+  - jQuery
+  - React
+canonicalPath: "/labs/beat-the-scrambler-origin"
+---
+
 # Beat the Scrambler: From a College jQuery Project to a Modern Browser Game
 
 Beat the Scrambler started as the kind of project many developers have somewhere in their past: small, functional, and built to prove that a simple idea could work in the browser.
 
 The first version was a sliding tile puzzle I built during college. It had numbered tiles, one empty space, a scramble button, and a win condition: put the board back in order. There was no character, no timer, no move counter, no leaderboard, no score submission, no mobile support, and no modern frontend framework around it. It was just HTML, CSS, JavaScript, and jQuery doing direct DOM work.
 
-Years later, while building Soft Arcade, I came back to that project. I did not want to turn it into something bigger just for nostalgia. I wanted to see whether a tiny browser puzzle could become a complete arcade-style game without losing the directness that made the original satisfying to build.
+Years later, I came back to that project. I did not want to turn it into something bigger just for nostalgia. I wanted to see whether a tiny browser puzzle could become a complete arcade-style game without losing the directness that made the original satisfying to build.
 
 That became Beat the Scrambler.
 
 [IMAGE: Original puzzle board]
 
-Soft Arcade is built around lightweight browser-native games: quick to load, easy to understand, and playable without accounts or installs. That makes old side projects useful raw material. They already contain something real: a mechanic, a constraint, a little proof that an interaction feels good enough to keep.
+That experiment eventually became the start of Soft Arcade: lightweight browser-native games that are quick to load, easy to understand, and playable without accounts or installs. Old side projects can be useful raw material for that kind of work. They already contain something real: a mechanic, a constraint, a little proof that an interaction feels good enough to keep.
 
 ## The Original College Project
 
@@ -84,7 +99,7 @@ This is the kind of code I like in a small game. The rule is not hidden inside a
 
 ## Revisiting the Project Years Later
 
-When I brought the game into Soft Arcade, the question was not "How do I make this look modern?" The better question was "What does a player expect from a browser game now?"
+When I came back to the game, the question was not "How do I make this look modern?" The better question was "What does a player expect from a browser game now?"
 
 The old version worked as a puzzle, but it did not behave like a complete game. It needed the things that make a round measurable and replayable:
 
@@ -105,6 +120,24 @@ None of those features change the underlying puzzle. They change the shape aroun
 The current game runs inside a Next.js App Router site. React owns the page shell, routing, layout, and static game surface. The jQuery runtime owns the live puzzle interaction after mount. The leaderboard API and shared arcade name utilities sit outside the game so they can be reused across Soft Arcade.
 
 That was the point where the college project became a Soft Arcade game rather than a rescued code sample.
+
+## The Project That Became Soft Arcade
+
+The original goal was not to launch a platform.
+
+At first, the project was much smaller than that: take an old puzzle, clean it up, make it playable on modern devices, and give it enough structure to feel like a complete browser game. That was already a reasonable amount of work. A sliding puzzle needs a fair scramble, readable controls, a start state, a solved state, and some feedback that makes a round feel finished.
+
+But every feature I added started raising questions that were bigger than Beat the Scrambler.
+
+A leaderboard meant there needed to be score persistence, validation, and a way to display rankings consistently. Score submission meant the player needed some kind of arcade identity, even without an account system. Analytics meant the game needed a vocabulary for events like starts, solves, restarts, and failed submissions. Mobile support meant the page shell had to respect the difference between reading a site and actively playing a game. Even the UI around menus, score panels, game cards, and win states started looking like something that should not be rebuilt from scratch for every future experiment.
+
+None of those problems were unique to a tile puzzle.
+
+That realization changed the shape of the work. I was no longer only improving an old puzzle. I was building infrastructure that another small browser game could also use: shared arcade identity, score submission, leaderboards, PostHog instrumentation, mobile play patterns, reusable game UI, and a hosting model that made each game feel like part of the same place.
+
+Beat the Scrambler became the first game because it forced those questions early. It had enough surface area to need real systems, but it was small enough that I could still understand every part of the stack. In practice, it became the prototype for Soft Arcade. The platform grew out of the act of making one old game feel complete.
+
+That is less dramatic than a grand plan, but it is more honest. I started modernizing a college project and gradually noticed that the useful work was not only inside the puzzle. It was in the repeatable layer forming around it.
 
 ## Why the jQuery Core Survived
 
@@ -297,6 +330,8 @@ That is what made the project worth revisiting. The interesting work was turning
 Beat the Scrambler now sits inside Soft Arcade as both a game and a small case study in incremental modernization. It still has the heart of the college project: numbered tiles, one empty space, a scrambled board, and the simple satisfaction of putting everything back where it belongs.
 
 Around that core, it now has the pieces a modern browser game needs: responsive play, difficulty levels, score tracking, local bests, leaderboards, analytics, menus, win states, and a strange little Scrambler trying to undo your work.
+
+It was also the first Soft Arcade game in a practical sense. The platform exists because rebuilding this puzzle exposed the systems a small arcade site would need: identity without accounts, scores that persist, reusable game surfaces, mobile play behavior, and enough instrumentation to learn from real rounds. Soft Arcade grew from those lessons rather than from a separate platform plan.
 
 That is the Soft Arcade mission in miniature. Build browser-native games that are lightweight, readable, and quick to play. Learn through building. Keep the experience small enough to load instantly, but complete enough to feel intentional.
 

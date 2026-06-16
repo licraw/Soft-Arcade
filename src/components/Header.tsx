@@ -6,6 +6,7 @@ export function Header() {
       <Link href="/" className="brand">Soft Arcade</Link>
       <nav className="site-nav" aria-label="Primary navigation">
         <Link href="/games">Games</Link>
+        <Link href="/labs">Labs</Link>
         <Link href="/about">About</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
