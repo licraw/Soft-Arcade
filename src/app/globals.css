@@ -416,6 +416,7 @@ a {
   display: grid;
   gap: 36px;
   width: min(1200px, calc(100% - 32px));
+  min-width: 0;
 }
 
 .labs-hero {
@@ -528,11 +529,16 @@ a {
 
 .lab-article-page article {
   width: 100%;
+  min-width: 0;
 }
 
 .lab-article-header {
   display: grid;
   gap: 16px;
+  width: min(860px, 100%);
+  min-width: 0;
+  margin-right: auto;
+  margin-left: auto;
   margin-bottom: 28px;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--line);
@@ -561,6 +567,9 @@ a {
 .lab-hero-image,
 .markdown-inline-image {
   display: block;
+  width: min(760px, 100%);
+  margin-right: auto;
+  margin-left: auto;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -579,9 +588,14 @@ a {
 }
 
 .markdown-article {
+  min-width: 0;
+  max-width: 860px;
+  margin-right: auto;
+  margin-left: auto;
   color: var(--text);
   font-size: 1.04rem;
   line-height: 1.75;
+  overflow-wrap: break-word;
 }
 
 .markdown-article h2,
@@ -612,6 +626,11 @@ a {
 .markdown-inline-image,
 .markdown-article pre {
   margin: 0 0 1.25em;
+}
+
+.markdown-article .markdown-inline-image {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .markdown-article p,
@@ -645,7 +664,9 @@ a {
 }
 
 .markdown-article pre {
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 18px;
   border: 1px solid rgba(125, 211, 252, 0.16);
   border-radius: 8px;
@@ -654,6 +675,7 @@ a {
 
 .markdown-article pre code {
   display: block;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -673,7 +695,9 @@ a {
 }
 
 .markdown-table-wrap {
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -1439,5 +1463,70 @@ a {
 
   .game-stage:has([data-game-shell="near-miss"]) {
     height: min(680px, 92svh);
+  }
+
+  .labs-page,
+  .lab-article-page {
+    width: min(100% - 24px, 1200px);
+    gap: 28px;
+    padding-top: 34px;
+  }
+
+  .lab-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lab-card {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .lab-article-header {
+    gap: 14px;
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+  }
+
+  .lab-article-header h1 {
+    font-size: clamp(2rem, 13vw, 3.2rem);
+    line-height: 1;
+  }
+
+  .lab-article-header p,
+  .markdown-article {
+    font-size: 1rem;
+    line-height: 1.68;
+  }
+
+  .lab-article-meta {
+    display: grid;
+    gap: 6px;
+  }
+
+  .lab-card-meta span:not(:last-child)::after,
+  .lab-article-meta span:not(:last-child)::after {
+    display: none;
+  }
+
+  .lab-hero-image,
+  .markdown-inline-image {
+    width: min(100%, 560px);
+    border-radius: 6px;
+  }
+
+  .markdown-article h2,
+  .markdown-article h3,
+  .markdown-article h4 {
+    margin-top: 1.8em;
+  }
+
+  .markdown-article ul,
+  .markdown-article ol {
+    padding-left: 1.15rem;
+  }
+
+  .markdown-article pre {
+    padding: 14px;
+    font-size: 0.86rem;
   }
 }
