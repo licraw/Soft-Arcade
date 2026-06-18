@@ -20,7 +20,7 @@ Beat the Scrambler is the first game on Soft Arcade. It is also the project that
 
 That was not the plan. At first, I just wanted to take a jQuery sliding puzzle I built in college, clean it up, and make it feel like a finished browser game. But each new feature revealed problems that went beyond tile puzzles, like saving scores, creating an arcade identity, supporting mobile play, and building reusable game interfaces. Solving those issues the right way led to Soft Arcade.
 
-The first version was a sliding tile puzzle built during college. It had numbered tiles, one empty space, a scramble button, and a win condition: put the board back in order. There was no character, no timer, no move counter, no leaderboard, no score submission, no mobile support, and no modern frontend framework. It was just HTML, CSS, JavaScript, and jQuery doing direct DOM work.
+The first version was a sliding tile puzzle built during my time at Portland Community College. It had numbered tiles, one empty space, a scramble button, and a win condition: put the board back in order. There was no character, no timer, no move counter, no leaderboard, no score submission, no mobile support, and no modern frontend framework. It was just HTML, CSS, JavaScript, and jQuery doing direct DOM work.
 
 Years later, I returned to that project. I was not interested in making it bigger just for nostalgia's sake. I wanted to find out if a small browser puzzle could become a full arcade-style game without losing the straightforward feel that made the original fun to build.
 
@@ -338,4 +338,4 @@ That sums up the Soft Arcade mission: build browser-native games that are lightw
 
 ![Beat the Scrambler running on a 4x4 board in Medium difficulty, showing the move counter, timer, and Scrambler mascot in the corner](/labs/beat-the-scrambler-origin/beat-the-scrambler-gameplay.png)
 
-[Try Beat the Scrambler](/beat-the-scrambler) and see the puzzle in action. If you want to learn how Soft Arcade's second game handles more complex features—real-time traffic, SAT collision detection, and an evolving difficulty system—the [Near Miss traffic evolution article](/labs/near-miss-traffic-evolution) covers those systems in the same level of detail.
+[Try Beat the Scrambler](/games/beat-the-scrambler) and see the puzzle in action. If you want to learn how Soft Arcade's second game handles more complex features—real-time traffic, SAT collision detection, and an evolving difficulty system—the [Near Miss traffic evolution article](/labs/near-miss-traffic-evolution) covers those systems in the same level of detail.
