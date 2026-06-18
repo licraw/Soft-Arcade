@@ -546,7 +546,7 @@ a {
 
 .lab-article-header h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 7vw, 4.8rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   line-height: 0.98;
 }
 
@@ -1488,7 +1488,7 @@ a {
   }
 
   .lab-article-header h1 {
-    font-size: clamp(2rem, 13vw, 3.2rem);
+    font-size: clamp(2rem, 9vw, 3rem);
     line-height: 1;
   }
 
