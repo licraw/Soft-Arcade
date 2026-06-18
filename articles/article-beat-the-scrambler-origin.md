@@ -1,31 +1,32 @@
 ---
 title: "Beat the Scrambler: From a College jQuery Project to a Modern Browser Game"
-description: "How an old jQuery sliding puzzle became the first Soft Arcade browser game and shaped the platform around it."
+description: "How a jQuery sliding puzzle built in college became the first Soft Arcade browser game—and the technical seed for the entire platform."
 slug: "beat-the-scrambler-origin"
 publishedAt: "2026-06-16"
-updatedAt: "2026-06-16"
+updatedAt: "2026-06-18"
 category: "Devlog"
 tags:
   - Browser Games
   - JavaScript
   - jQuery
   - React
+  - Next.js
+  - PostHog
+  - Game Development
 canonicalPath: "/labs/beat-the-scrambler-origin"
 ---
 
-# Beat the Scrambler: From a College jQuery Project to a Modern Browser Game
+Beat the Scrambler is the first game on Soft Arcade. It is also the project that created the platform.
 
-Beat the Scrambler started as the kind of project many developers have somewhere in their past: small, functional, and built to prove that a simple idea could work in the browser.
+That was not the plan. The original goal was smaller: take a jQuery sliding puzzle built during college, clean it up, and make it feel like a complete browser game. But every feature added exposed a problem that was not unique to a tile puzzle—score persistence, arcade identity, mobile play behavior, reusable game UI. Solving those problems once, properly, became Soft Arcade.
 
-The first version was a sliding tile puzzle I built during college. It had numbered tiles, one empty space, a scramble button, and a win condition: put the board back in order. There was no character, no timer, no move counter, no leaderboard, no score submission, no mobile support, and no modern frontend framework around it. It was just HTML, CSS, JavaScript, and jQuery doing direct DOM work.
+The first version was a sliding tile puzzle built during college. It had numbered tiles, one empty space, a scramble button, and a win condition: put the board back in order. There was no character, no timer, no move counter, no leaderboard, no score submission, no mobile support, and no modern frontend framework around it. It was just HTML, CSS, JavaScript, and jQuery doing direct DOM work.
 
 Years later, I came back to that project. I did not want to turn it into something bigger just for nostalgia. I wanted to see whether a tiny browser puzzle could become a complete arcade-style game without losing the directness that made the original satisfying to build.
 
-That became Beat the Scrambler.
+![The original Beat the Scrambler numbered-tile puzzle board, before any modernisation](/labs/bts-original-puzzle-board.png)
 
-![Original Beat the Scrambler puzzle board](/labs/bts-original-puzzle-board.png)
-
-That experiment eventually became the start of Soft Arcade: lightweight browser-native games that are quick to load, easy to understand, and playable without accounts or installs. Old side projects can be useful raw material for that kind of work. They already contain something real: a mechanic, a constraint, a little proof that an interaction feels good enough to keep.
+Old side projects can be useful raw material for that kind of work. They already contain something real: a mechanic, a constraint, a little proof that an interaction feels good enough to keep. Soft Arcade is built on that premise—lightweight browser-native games that are quick to load, easy to understand, and playable without accounts or installs.
 
 ## The Original College Project
 
@@ -67,7 +68,7 @@ function scramble() {
 
 The `do...while` guard handles the rare case where the random walk comes back to the solved state. If it does, the game simply scrambles again.
 
-![Solvable scramble algorithm diagram](/labs/beat-the-scrambler-origin/solvable-scramble-algorithm.png)
+![Diagram showing the random-walk approach: starting from the solved state and applying legal gap moves to guarantee a solvable board](/labs/beat-the-scrambler-origin/solvable-scramble-algorithm.png)
 
 The number of scramble moves scales with difficulty:
 
@@ -147,7 +148,7 @@ I did not do that here.
 
 The puzzle logic already worked. The board interactions were reliable. jQuery's animation model was a natural fit for numbered tiles sliding into an empty space. A full React rewrite would have taken time, introduced new edge cases, and produced very little player-facing value.
 
-So the modern version uses an island-style boundary. `BeatTheScramblerGame.tsx` renders the static scaffold: HUD, board container, menus, win modal, leaderboard modal, and confirm modal. In a `useEffect`, it dynamically imports jQuery, installs it on `window`, loads the game config and utility scripts, and then mounts the jQuery runtime:
+So the modern version uses an island-style boundary. React owns the static scaffold; jQuery owns the live interaction. In practice, this means `BeatTheScramblerGame.tsx` renders the HUD, board container, menus, and modals as ordinary HTML—and then a `useEffect` dynamically imports jQuery, loads the game scripts in dependency order, and hands control to the jQuery runtime:
 
 ```tsx
 useEffect(() => {
@@ -180,7 +181,7 @@ The original puzzle had no character. It was just numbers.
 
 That was fine for a college project, but Soft Arcade needed the game to have a little attitude. The mechanic is about restoring order after chaos, so the obvious antagonist was the thing that creates the chaos: the Scrambler.
 
-![Scrambler mascot](/labs/beat-the-scrambler-origin/scrambler-mascot.svg)
+![The Scrambler mascot: a hexagonal face with asymmetric eyes, glitch bars, and a bent cubic-Bezier mouth, rendered entirely in inline SVG](/labs/beat-the-scrambler-origin/scrambler-mascot.svg)
 
 The Scrambler is implemented entirely as inline SVG returned by `getScramblerMarkup()` in `mountBeatTheScrambler.js`. There are no image assets involved:
 
@@ -331,10 +332,10 @@ Beat the Scrambler now sits inside Soft Arcade as both a game and a small case s
 
 Around that core, it now has the pieces a modern browser game needs: responsive play, difficulty levels, score tracking, local bests, leaderboards, analytics, menus, win states, and a strange little Scrambler trying to undo your work.
 
-It was also the first Soft Arcade game in a practical sense. The platform exists because rebuilding this puzzle exposed the systems a small arcade site would need: identity without accounts, scores that persist, reusable game surfaces, mobile play behavior, and enough instrumentation to learn from real rounds. Soft Arcade grew from those lessons rather than from a separate platform plan.
+The platform exists because rebuilding this puzzle exposed the systems a small arcade site would need: identity without accounts, scores that persist, reusable game surfaces, mobile play behavior, and enough instrumentation to learn from real rounds. Soft Arcade grew from those lessons rather than from a separate platform plan. The design principles that came out of it—no-login play, performance as user experience, real-time analytics from the first round—now apply to every game on the site.
 
 That is the Soft Arcade mission in miniature. Build browser-native games that are lightweight, readable, and quick to play. Learn through building. Keep the experience small enough to load instantly, but complete enough to feel intentional.
 
-![Beat the Scrambler gameplay](/labs/beat-the-scrambler-origin/beat-the-scrambler-gameplay.png)
+![Beat the Scrambler running on a 4x4 board in Medium difficulty, showing the move counter, timer, and Scrambler mascot in the corner](/labs/beat-the-scrambler-origin/beat-the-scrambler-gameplay.png)
 
-Play Beat the Scrambler.
+[Play Beat the Scrambler](/beat-the-scrambler) and see the puzzle in action. If you are interested in how Soft Arcade's second game approaches more complex state—real-time traffic, SAT collision detection, and an evolving difficulty system—the [Near Miss traffic evolution article](/labs/near-miss-traffic-evolution) covers those systems in the same level of detail.
