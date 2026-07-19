@@ -2,8 +2,8 @@
 title: "Building Near Miss Traffic: From Ghost Cars to Lane Following"
 description: "How Near Miss traffic went from a hard-coded speed floor and overlapping ghost cars through a discarded validation experiment to a world-speed-decoupled system that feels believable without breaking arcade fun."
 slug: "near-miss-traffic-evolution"
-publishedAt: "2026-06-19"
-updatedAt: "2026-06-19"
+publishedAt: "2026-07-19"
+updatedAt: "2026-07-19"
 category: "Devlog"
 tags:
   - Browser Games
