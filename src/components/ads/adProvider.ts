@@ -1,5 +1,11 @@
 export type AdProvider = "house";
 
 export function getAdProvider(value: string | undefined): AdProvider {
-  return value?.trim().toLowerCase() === "house" ? "house" : "house";
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (normalizedValue === "house") {
+    return normalizedValue;
+  }
+
+  return "house";
 }
