@@ -62,7 +62,9 @@ export default async function LabArticlePage({ params }: LabArticleRouteProps) {
 
   return (
     <main className="content-section lab-article-page">
-      <Link href="/labs" className="back-link">Back to Labs</Link>
+      <div className="back-link-wrapper">
+        <Link href="/labs" className="back-link">Back to Labs</Link>
+      </div>
       <article>
         <header className="lab-article-header">
           <p className="eyebrow">{article.category}</p>
