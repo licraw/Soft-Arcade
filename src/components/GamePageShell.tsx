@@ -10,7 +10,7 @@ type GamePageShellProps = {
 };
 
 export function GamePageShell({ game, children }: GamePageShellProps) {
-  const showDailyScramble = game.id !== "near-miss";
+  const showDailyScramble = false;
 
   return (
     <main className="game-page">

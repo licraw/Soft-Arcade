@@ -47,9 +47,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="content-section daily-scramble-section">
+      {/* <section className="content-section daily-scramble-section">
         <DailyScramble />
-      </section>
+      </section> */}
     </main>
   );
 }
